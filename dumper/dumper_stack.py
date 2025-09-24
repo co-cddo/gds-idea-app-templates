@@ -2,7 +2,6 @@
 from aws_cdk import (
     CfnOutput,
     Duration,
-    RemovalPolicy,
     Stack,
     aws_certificatemanager as acm,
     aws_cognito as cognito,
@@ -16,6 +15,7 @@ from aws_cdk import (
     aws_wafv2 as wafv2,
 )
 from aws_cdk.aws_ecr_assets import Platform
+from aws_cdk.aws_route53_targets import LoadBalancerTarget
 from constructs import Construct
 
 
@@ -210,6 +210,14 @@ class DumperStack(Stack):  # The class name matches the file name
                 # After a successful login, forward the request to your Fargate service
                 next=elbv2.ListenerAction.forward([target_group]),
             ),
+        )
+
+        route53.ARecord(
+            self,
+            f"{self.app_name}AliasRecord",
+            zone=app_hosted_zone,  # IMPORTANT: Target the new delegated zone
+            # The record name is the root of this new zone, so we leave it blank.
+            target=route53.RecordTarget.from_alias(LoadBalancerTarget(lb)),
         )
 
         # --- Step 2: Create the association ---
