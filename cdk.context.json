@@ -1,0 +1,85 @@
+{
+  "acknowledged-issue-numbers": [
+    34892,
+    34892,
+    32775,
+    32775
+  ],
+  "vpc-provider:account=992382722318:filter.vpc-id=vpc-0fbe9821d4ce0cd3a:region=eu-west-2:returnAsymmetricSubnets=true": {
+    "vpcId": "vpc-0fbe9821d4ce0cd3a",
+    "vpcCidrBlock": "10.0.0.0/16",
+    "ownerAccountId": "992382722318",
+    "availabilityZones": [],
+    "subnetGroups": [
+      {
+        "name": "Public",
+        "type": "Public",
+        "subnets": [
+          {
+            "subnetId": "subnet-03430264993a593ae",
+            "cidr": "10.0.0.0/24",
+            "availabilityZone": "eu-west-2a",
+            "routeTableId": "rtb-0eb6a8dea282263eb"
+          },
+          {
+            "subnetId": "subnet-0b45a51a4b342b1ab",
+            "cidr": "10.0.1.0/24",
+            "availabilityZone": "eu-west-2b",
+            "routeTableId": "rtb-04827c00b0f44d615"
+          }
+        ]
+      }
+    ]
+  },
+  "load-balancer:account=992382722318:loadBalancerArn=arn$:aws$:elasticloadbalancing$:eu-west-2$:992382722318$:loadbalancer/app/ec2-universal-alb/ce7e6b7cc4191183:loadBalancerType=application:region=eu-west-2": {
+    "loadBalancerArn": "arn:aws:elasticloadbalancing:eu-west-2:992382722318:loadbalancer/app/ec2-universal-alb/ce7e6b7cc4191183",
+    "loadBalancerCanonicalHostedZoneId": "ZHURV8PSTC4K8",
+    "loadBalancerDnsName": "ec2-universal-alb-1879959595.eu-west-2.elb.amazonaws.com",
+    "vpcId": "vpc-0cd35f828528b0830",
+    "securityGroupIds": [
+      "sg-0ffe52a6066cd0c5d"
+    ],
+    "ipAddressType": "ipv4"
+  },
+  "load-balancer-listener:account=992382722318:listenerArn=arn$:aws$:elasticloadbalancing$:eu-west-2$:992382722318$:listener/app/ec2-universal-alb/ce7e6b7cc4191183/d29ca72ffb98439e:loadBalancerType=application:region=eu-west-2": {
+    "listenerArn": "arn:aws:elasticloadbalancing:eu-west-2:992382722318:listener/app/ec2-universal-alb/ce7e6b7cc4191183/d29ca72ffb98439e",
+    "listenerPort": 443,
+    "securityGroupIds": [
+      "sg-0ffe52a6066cd0c5d"
+    ]
+  },
+  "vpc-provider:account=992382722318:filter.vpc-id=vpc-0cd35f828528b0830:region=eu-west-2:returnAsymmetricSubnets=true": {
+    "vpcId": "vpc-0cd35f828528b0830",
+    "vpcCidrBlock": "10.0.0.0/16",
+    "ownerAccountId": "992382722318",
+    "availabilityZones": [],
+    "subnetGroups": [
+      {
+        "name": "Public",
+        "type": "Public",
+        "subnets": [
+          {
+            "subnetId": "subnet-02a3380a16b21d6fb",
+            "cidr": "10.0.0.0/24",
+            "availabilityZone": "eu-west-2a",
+            "routeTableId": "rtb-0b11eb4334f272dbd"
+          },
+          {
+            "subnetId": "subnet-06836e2ef200d86d6",
+            "cidr": "10.0.1.0/24",
+            "availabilityZone": "eu-west-2b",
+            "routeTableId": "rtb-03958d8ef8e21d1fd"
+          }
+        ]
+      }
+    ]
+  },
+  "security-group:account=992382722318:region=eu-west-2:securityGroupId=sg-0ffe52a6066cd0c5d": {
+    "securityGroupId": "sg-0ffe52a6066cd0c5d",
+    "allowAllOutbound": false
+  },
+  "hosted-zone:account=992382722318:domainName=gds-idea.click:region=eu-west-2": {
+    "Id": "/hostedzone/Z0664036K10RJS9CX7L5",
+    "Name": "gds-idea.click."
+  }
+}
