@@ -46,20 +46,33 @@ class DumperStack(Stack):  # The class name matches the file name
         pool = cognito.UserPool.from_user_pool_id(
             self, "ExistingUserPool", USER_POOL_ID
         )
-        # 1. Look up your existing Hosted Zone in Route 53
-        hosted_zone = route53.HostedZone.from_lookup(
+
+        parent_hosted_zone = route53.HostedZone.from_lookup(
             self,
             "HostedZone",
             domain_name=self.domain_name,
         )
 
-        # 3. Create a new ACM Certificate and validate it using DNS
+        app_hosted_zone = route53.HostedZone(
+            self,
+            f"{self.app_name}HostedZone",
+            zone_name=self.alb_domain_name,
+        )
+
+        # create delegation
+        route53.NsRecord(
+            self,
+            f"{self.app_name}NsRecord",
+            zone=parent_hosted_zone,
+            record_name=self.app_name,
+            values=app_hosted_zone.hosted_zone_name_servers,
+        )
+
         certificate = acm.Certificate(
             self,
             f"{self.app_name}Certificate",
             domain_name=self.alb_domain_name,
-            # This tells CDK to add the validation record to your Route 53 zone automatically
-            validation=acm.CertificateValidation.from_dns(hosted_zone),
+            validation=acm.CertificateValidation.from_dns(parent_hosted_zone),
         )
 
         client = cognito.UserPoolClient(
@@ -207,15 +220,6 @@ class DumperStack(Stack):  # The class name matches the file name
             "WAF-ALB-Association",
             resource_arn=lb.load_balancer_arn,
             web_acl_arn=WAF_ARN,
-        )
-
-        # 4. Create a CNAME record in your hosted zone to point to the ALB
-        route53.CnameRecord(
-            self,
-            "CnameRecord",
-            record_name=self.app_name,
-            zone=hosted_zone,
-            domain_name=lb.load_balancer_dns_name,
         )
 
         # 5. Output the ALB's DNS name for reference
