@@ -215,8 +215,7 @@ class DumperStack(Stack):  # The class name matches the file name
         route53.ARecord(
             self,
             f"{self.app_name}AliasRecord",
-            zone=app_hosted_zone,  # IMPORTANT: Target the new delegated zone
-            # The record name is the root of this new zone, so we leave it blank.
+            zone=app_hosted_zone,
             target=route53.RecordTarget.from_alias(LoadBalancerTarget(lb)),
         )
 
