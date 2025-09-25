@@ -50,7 +50,7 @@ class AppConfig:
 
         if environment == DeploymentEnvironment.PROD:
             logger.warning(
-                f"🚨🚨 Deploying to {environment.friendly_name.upper()} environment "
+                f"Deploying to {environment.friendly_name.upper()} environment "
                 "- please double-check configuration"
             )
 
