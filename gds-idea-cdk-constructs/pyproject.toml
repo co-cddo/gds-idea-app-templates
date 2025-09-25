@@ -1,0 +1,17 @@
+[project]
+name = "gds-idea-cdk-constructs"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "David Gillespie", email = "david.gillespie@digital.cabinet-office.gov.uk" }
+]
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+gds-idea-cdk-constructs = "gds_idea_cdk_constructs:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
