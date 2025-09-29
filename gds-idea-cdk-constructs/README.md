@@ -100,7 +100,7 @@ public_app = WebApp(
 )
 ```
 
-### 4. Advanced Usage
+### 3. Advanced Usage
 
 This example shows how to customize the container's resources, provide environment variables, and attach a custom IAM role for the application.
 
