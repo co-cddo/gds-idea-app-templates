@@ -2,7 +2,8 @@
 import os
 
 import aws_cdk as cdk
-from gds_idea_cdk_constructs import AuthType, EnvConfig, WebApp
+from gds_idea_cdk_constructs import EnvConfig
+from gds_idea_cdk_constructs.web_app import AuthType, WebApp
 
 app = cdk.App()
 

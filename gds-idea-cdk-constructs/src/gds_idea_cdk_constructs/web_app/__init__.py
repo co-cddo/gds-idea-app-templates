@@ -1,10 +1,9 @@
-from .config import DeploymentEnvironment, EnvConfig
-from .constructs import AuthType, WebApp, WebAppContainerProperties
+from ._auth_strategies import AuthType
+from .props import WebAppContainerProperties
+from .stack import WebApp
 
 __all__ = [
-    WebApp,
-    WebAppContainerProperties,
-    AuthType,
-    DeploymentEnvironment,
-    EnvConfig,
+    "WebApp",
+    "WebAppContainerProperties",
+    "AuthType",
 ]

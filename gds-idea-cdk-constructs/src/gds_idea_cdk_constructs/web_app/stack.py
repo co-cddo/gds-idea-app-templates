@@ -17,7 +17,7 @@ from aws_cdk.aws_route53_targets import LoadBalancerTarget
 from constructs import Construct
 
 from ..config import EnvConfig
-from .auth_strategies import (
+from ._auth_strategies import (
     AuthType,
     CognitoAuthStrategy,
     IAuthStrategy,

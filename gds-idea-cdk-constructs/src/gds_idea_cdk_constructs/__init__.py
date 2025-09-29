@@ -1,15 +1,6 @@
-from .web_app import (
-    AuthType,
-    DeploymentEnvironment,
-    EnvConfig,
-    WebApp,
-    WebAppContainerProperties,
-)
+from .config import DeploymentEnvironment, EnvConfig
 
 __all__ = [
-    AuthType,
-    DeploymentEnvironment,
-    EnvConfig,
-    WebApp,
-    WebAppContainerProperties,
+    "DeploymentEnvironment",
+    "EnvConfig",
 ]
