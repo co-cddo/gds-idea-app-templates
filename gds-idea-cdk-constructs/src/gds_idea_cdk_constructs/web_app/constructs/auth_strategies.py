@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from enum import StrEnum
 
 from aws_cdk import (
     CfnOutput,
@@ -8,15 +9,22 @@ from aws_cdk import (
 )
 from constructs import Construct
 
-from ..config.app_config import AppConfig
+from ..config import EnvConfig
+
+
+class AuthType(StrEnum):
+    """Defines the supported authentication types for the WebApp construct."""
+
+    NONE = "none"
+    COGNITO = "cognito"
 
 
 class IAuthStrategy(ABC):
     """Interface for an authentication strategy."""
 
-    def __init__(self, scope: Construct, app_config: AppConfig, app_name: str):
+    def __init__(self, scope: Construct, env_config: EnvConfig, app_name: str):
         self.scope = scope
-        self.app_config = app_config
+        self.env_config = env_config
         self.app_name = app_name
 
     @abstractmethod
@@ -45,24 +53,24 @@ class NoAuthStrategy(IAuthStrategy):
 class CognitoAuthStrategy(IAuthStrategy):
     """A strategy for apps using Cognito authentication."""
 
-    def __init__(self, scope: Construct, app_config: AppConfig, app_name: str):
-        super().__init__(scope, app_config, app_name)
+    def __init__(self, scope: Construct, env_config: EnvConfig, app_name: str):
+        super().__init__(scope, env_config, app_name)
         # Perform all Cognito-specific resource lookups and creation here.
         self._setup_cognito_resources()
 
     def _setup_cognito_resources(self):
         """Looks up and creates all necessary Cognito resources."""
         self.user_pool = cognito.UserPool.from_user_pool_id(
-            self.scope, "ExistingUserPool", self.app_config.user_pool_id
+            self.scope, "ExistingUserPool", self.env_config.user_pool_id
         )
 
         self.user_pool_domain = cognito.UserPoolDomain.from_domain_name(
             self.scope,
             "ExistingCustomCognitoDomain",
-            user_pool_domain_name=f"auth.{self.app_config.domain_name}",
+            user_pool_domain_name=f"auth.{self.env_config.domain_name}",
         )
 
-        alb_domain_name = f"{self.app_name}.{self.app_config.domain_name}"
+        alb_domain_name = f"{self.app_name}.{self.env_config.domain_name}"
 
         self.cognito_client = cognito.UserPoolClient(
             self.scope,

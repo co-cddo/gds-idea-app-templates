@@ -33,11 +33,11 @@ class DeploymentEnvironment(Enum):
 
 
 @dataclass
-class AppConfig:
+class EnvConfig:
     """Configuration for GDS Idea web applications."""
 
     def __init__(self, cdk_env: CdkEnvironment):
-        """Create AppConfig for the given CDK Environment."""
+        """Create EnvConfig for the given CDK Environment."""
         # Validate region
         if cdk_env.region and cdk_env.region != "eu-west-2":
             logger.warning(f"Using region '{cdk_env.region}' - eu-west-2 is preferred")

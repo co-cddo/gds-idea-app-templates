@@ -15,11 +15,13 @@ from aws_cdk.aws_ecr_assets import Platform
 from aws_cdk.aws_route53_targets import LoadBalancerTarget
 from constructs import Construct
 
-from ..config.app_config import AppConfig
-from .auth_strategies import CognitoAuthStrategy, IAuthStrategy, NoAuthStrategy
-
-# Import the local types and strategies
-from .auth_types import AuthType
+from ..config import EnvConfig
+from .auth_strategies import (
+    AuthType,
+    CognitoAuthStrategy,
+    IAuthStrategy,
+    NoAuthStrategy,
+)
 from .props import WebAppContainerProperties
 
 logger = logging.getLogger(__name__)
@@ -35,39 +37,37 @@ class WebApp(Construct):
         self,
         scope: Construct,
         construct_id: str,
-        app_config: AppConfig,
+        env_config: EnvConfig,
         app_name: str,
-        authentication: AuthType | str = AuthType.NONE,
+        authentication: AuthType = AuthType.COGNITO,
         docker_context_path: str = ".",
         dockerfile_path: str = "src/Dockerfile",
         container_props: WebAppContainerProperties = None,
     ) -> None:
         super().__init__(scope, construct_id)
 
-        self.app_config = app_config
+        self.env_config = env_config
         self.app_name = app_name
         self.container_props = (
             container_props or WebAppContainerProperties()
         )  # Load the default values
 
         # Derived configuration
-        self.alb_domain_name = f"{self.app_name}.{self.app_config.domain_name}"
+        self.alb_domain_name = f"{self.app_name}.{self.env_config.domain_name}"
 
-        # --- Internal Strategy Factory ---
-        # This block translates the simple enum/string into the correct internal strategy object.
+        # Select the auth strategy
         self._auth_strategy: IAuthStrategy
-        auth_type_str = str(authentication).lower()
 
-        if auth_type_str == AuthType.COGNITO:
-            self._auth_strategy = CognitoAuthStrategy(self, app_config, app_name)
-        elif auth_type_str == AuthType.NONE:
-            self._auth_strategy = NoAuthStrategy(self, app_config, app_name)
+        if authentication == AuthType.COGNITO:
+            self._auth_strategy = CognitoAuthStrategy(self, env_config, app_name)
+        elif authentication == AuthType.NONE:
+            self._auth_strategy = NoAuthStrategy(self, env_config, app_name)
         else:
             raise ValueError(f"Unsupported authentication type: {authentication}")
         # --------------------------------
 
         logger.info(
-            f"Creating web app: {self.app_name} with authentication: {auth_type_str}"
+            f"Creating web app: {self.app_name} with authentication: {authentication}"
         )
         logger.info(f"Domain: {self.alb_domain_name}")
 
@@ -83,15 +83,15 @@ class WebApp(Construct):
     def _import_existing_resources(self) -> None:
         """Import existing VPC and other shared resources."""
         self.vpc = ec2.Vpc.from_lookup(
-            self, "ExistingVPC", vpc_id=self.app_config.vpc_id
+            self, "ExistingVPC", vpc_id=self.env_config.vpc_id
         )
 
         self.parent_hosted_zone = route53.HostedZone.from_lookup(
-            self, "HostedZone", domain_name=self.app_config.domain_name
+            self, "HostedZone", domain_name=self.env_config.domain_name
         )
 
         self.log_bucket = s3.Bucket.from_bucket_name(
-            self, "ALBAccessLogsBucket", self.app_config.log_bucket_name
+            self, "ALBAccessLogsBucket", self.env_config.log_bucket_name
         )
 
     def _setup_dns_and_certificate(self) -> None:
@@ -214,7 +214,7 @@ class WebApp(Construct):
             self,
             "WAF-ALB-Association",
             resource_arn=self.load_balancer.load_balancer_arn,
-            web_acl_arn=self.app_config.waf_arn,
+            web_acl_arn=self.env_config.waf_arn,
         )
 
     def _create_outputs(self) -> None:
