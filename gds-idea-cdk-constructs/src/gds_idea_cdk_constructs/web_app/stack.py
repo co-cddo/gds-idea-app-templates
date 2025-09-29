@@ -31,7 +31,6 @@ logger = logging.getLogger(__name__)
 class WebApp(Stack):
     """
     A configurable web application stack with a simplified API for authentication.
-    This construct acts as a facade, hiding the internal strategy implementation.
     """
 
     def __init__(
@@ -43,6 +42,7 @@ class WebApp(Stack):
         docker_context_path: str = ".",
         dockerfile_path: str = "src/Dockerfile",
         container_props: WebAppContainerProperties = None,
+        task_role: iam.IRole = None,
     ) -> None:
         # Generate stack ID from app_name
         stack_id = f"{app_name}-stack"
@@ -70,12 +70,13 @@ class WebApp(Stack):
             raise ValueError(f"Unsupported authentication type: {authentication}")
         # --------------------------------
 
+        self.task_role = task_role or self._get_minimal_role()
+
         logger.info(
             f"Creating web app: {self.app_name} with authentication: {authentication}"
         )
         logger.info(f"Domain: {self.alb_domain_name}")
 
-        # The rest of the construct uses the internal strategy where needed
         self._import_existing_resources()
         self._setup_dns_and_certificate()
         self._setup_ecs_resources(docker_context_path, dockerfile_path)
@@ -99,7 +100,6 @@ class WebApp(Stack):
         )
 
     def _setup_dns_and_certificate(self) -> None:
-        # This method is unchanged
         self.app_hosted_zone = route53.HostedZone(
             self, "AppHostedZone", zone_name=self.alb_domain_name
         )
@@ -117,10 +117,15 @@ class WebApp(Stack):
             validation=acm.CertificateValidation.from_dns(self.parent_hosted_zone),
         )
 
+    def _get_minimal_role(self) -> iam.Role:
+        """Creates a new IAM Role with minimal permissions for the ECS task."""
+        return iam.Role(
+            self, "TaskRole", assumed_by=iam.ServicePrincipal("ecs-tasks.amazonaws.com")
+        )
+
     def _setup_ecs_resources(
         self, docker_context_path: str, dockerfile_path: str
     ) -> None:
-        # This method is unchanged
         cpu = self.container_props.cpu
         memory = self.container_props.memory_limit_mib
         desired_count = self.container_props.desired_count
@@ -128,9 +133,6 @@ class WebApp(Stack):
         environment = self.container_props.environment_variables
 
         self.cluster = ecs.Cluster(self, "Cluster", vpc=self.vpc)
-        self.task_role = iam.Role(
-            self, "TaskRole", assumed_by=iam.ServicePrincipal("ecs-tasks.amazonaws.com")
-        )
 
         self.task_definition = ecs.FargateTaskDefinition(
             self,
@@ -201,7 +203,6 @@ class WebApp(Stack):
         )
 
     def _setup_dns_record(self) -> None:
-        # This method is unchanged
         route53.ARecord(
             self,
             "ARecord",
@@ -212,7 +213,6 @@ class WebApp(Stack):
         )
 
     def _associate_waf(self) -> None:
-        # This method is unchanged
         wafv2.CfnWebACLAssociation(
             self,
             "WAF-ALB-Association",
@@ -229,5 +229,4 @@ class WebApp(Stack):
             description=f"Application URL for {self.app_name}",
         )
 
-        # DELEGATION: Ask the strategy to create its own outputs, if any.
         self._auth_strategy.create_outputs()
