@@ -49,6 +49,10 @@ class NoAuthStrategy(IAuthStrategy):
         """The action is to simply forward traffic."""
         return elbv2.ListenerAction.forward([target_group])
 
+    def create_outputs(self) -> None:
+        """This strategy has no specific outputs, so this method does nothing."""
+        pass
+
 
 class CognitoAuthStrategy(IAuthStrategy):
     """A strategy for apps using Cognito authentication."""
