@@ -2,10 +2,16 @@
 import os
 
 import aws_cdk as cdk
+from aws_cdk import Tags
 from gds_idea_cdk_constructs import EnvConfig
 from gds_idea_cdk_constructs.web_app import AuthType, WebApp
 
 app = cdk.App()
+
+
+Tags.of(app).add("Environment", "development")
+Tags.of(app).add("ManagedBy", "cdk")
+Tags.of(app).add("repo", "TBA")
 
 cdk_env = cdk.Environment(
     account=os.environ["CDK_DEFAULT_ACCOUNT"],
