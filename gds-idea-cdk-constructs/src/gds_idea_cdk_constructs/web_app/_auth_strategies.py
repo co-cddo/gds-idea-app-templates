@@ -126,3 +126,10 @@ class CognitoAuthStrategy(IAuthStrategy):
             value=self.cognito_client.user_pool_client_id,
             description=f"Cognito Client ID for {self.app_name}",
         )
+
+
+# Map the strategies
+AUTH_STRATEGY_MAP = {
+    AuthType.COGNITO: CognitoAuthStrategy,
+    AuthType.NONE: NoAuthStrategy,
+}

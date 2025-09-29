@@ -18,6 +18,7 @@ from constructs import Construct
 
 from ..config import EnvConfig
 from ._auth_strategies import (
+    AUTH_STRATEGY_MAP,
     AuthType,
     CognitoAuthStrategy,
     IAuthStrategy,
@@ -60,15 +61,12 @@ class WebApp(Stack):
         self.alb_domain_name = f"{self.app_name}.{self.env_config.domain_name}"
 
         # Select the auth strategy
-        self._auth_strategy: IAuthStrategy
+        strategy_class = AUTH_STRATEGY_MAP.get(authentication)
 
-        if authentication == AuthType.COGNITO:
-            self._auth_strategy = CognitoAuthStrategy(self, env_config, app_name)
-        elif authentication == AuthType.NONE:
-            self._auth_strategy = NoAuthStrategy(self, env_config, app_name)
-        else:
+        if not strategy_class:
             raise ValueError(f"Unsupported authentication type: {authentication}")
-        # --------------------------------
+
+        self._auth_strategy: IAuthStrategy = strategy_class(self, env_config, app_name)
 
         self.task_role = task_role or self._get_minimal_role()
 
