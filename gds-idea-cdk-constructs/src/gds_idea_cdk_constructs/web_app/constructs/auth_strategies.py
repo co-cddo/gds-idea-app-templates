@@ -94,6 +94,15 @@ class CognitoAuthStrategy(IAuthStrategy):
             ),
         )
 
+        # Enable managed login branding with default Cognito styling
+        cognito.CfnManagedLoginBranding(
+            self.scope,
+            "ManagedLoginBranding",
+            user_pool_id=self.user_pool.user_pool_id,
+            client_id=self.cognito_client.user_pool_client_id,
+            use_cognito_provided_values=True,
+        )
+
     def create_listener_action(
         self, target_group: elbv2.IApplicationTargetGroup
     ) -> elbv2.ListenerAction:

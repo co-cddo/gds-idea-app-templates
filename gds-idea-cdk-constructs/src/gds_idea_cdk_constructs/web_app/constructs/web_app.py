@@ -2,6 +2,7 @@ import logging
 
 from aws_cdk import (
     CfnOutput,
+    Stack,
     aws_certificatemanager as acm,
     aws_ec2 as ec2,
     aws_ecs as ecs,
@@ -27,7 +28,7 @@ from .props import WebAppContainerProperties
 logger = logging.getLogger(__name__)
 
 
-class WebApp(Construct):
+class WebApp(Stack):
     """
     A configurable web application stack with a simplified API for authentication.
     This construct acts as a facade, hiding the internal strategy implementation.
@@ -36,7 +37,6 @@ class WebApp(Construct):
     def __init__(
         self,
         scope: Construct,
-        construct_id: str,
         env_config: EnvConfig,
         app_name: str,
         authentication: AuthType = AuthType.COGNITO,
@@ -44,7 +44,11 @@ class WebApp(Construct):
         dockerfile_path: str = "src/Dockerfile",
         container_props: WebAppContainerProperties = None,
     ) -> None:
-        super().__init__(scope, construct_id)
+        # Generate stack ID from app_name
+        stack_id = f"{app_name}-stack"
+
+        # Initialize the Stack with the CDK environment
+        super().__init__(scope, stack_id, env=env_config.cdk_env)
 
         self.env_config = env_config
         self.app_name = app_name
@@ -136,7 +140,6 @@ class WebApp(Construct):
             task_role=self.task_role,
         )
 
-        environment = self.container_props.get("environment_variables", {})
         self.container = self.task_definition.add_container(
             "Container",
             image=ecs.ContainerImage.from_asset(

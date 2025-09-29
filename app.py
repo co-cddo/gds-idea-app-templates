@@ -2,28 +2,25 @@
 import os
 
 import aws_cdk as cdk
-from aws_cdk import Aspects
-from cdk_nag import AwsSolutionsChecks, NagPackSuppression, NagSuppressions
-
-# The import path correctly points into the 'dumper' directory
-from dumper.dumper_stack import DumperStack
+from gds_idea_cdk_constructs import AuthType, EnvConfig, WebApp
 
 app = cdk.App()
 
-env = cdk.Environment(
-    account=os.environ["CDK_DEFAULT_ACCOUNT"], region=os.environ["CDK_DEFAULT_REGION"]
+cdk_env = cdk.Environment(
+    account=os.environ["CDK_DEFAULT_ACCOUNT"],
+    region=os.environ["CDK_DEFAULT_REGION"],
 )
 
+env_config = EnvConfig(cdk_env)
 
-stack = DumperStack(
+stack = WebApp(
     app,
-    "DumperStack",
+    env_config=env_config,
     app_name="dumper",
-    domain_name="gds-idea.click",
-    cloudfront_domain_name="d1cp3mv9sf5cdw.cloudfront.net",
-    env=env,
-)  # This name should match your stack class
-# Apply checks
-# Aspects.of(stack).add(AwsSolutionsChecks())
+    authentication=AuthType.COGNITO,
+    docker_context_path=".",
+    dockerfile_path="src/Dockerfile",
+)
+
 
 app.synth()
