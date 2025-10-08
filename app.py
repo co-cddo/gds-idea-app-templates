@@ -18,7 +18,7 @@ cdk_env = cdk.Environment(
     region=os.environ["CDK_DEFAULT_REGION"],
 )
 
-env_config = EnvConfig(cdk_env)
+env_config = EnvConfig(cdk_env)t
 
 stack = WebApp(
     app,

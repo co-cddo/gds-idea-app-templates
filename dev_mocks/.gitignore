@@ -1,0 +1,3 @@
+# Ignore actual dev mock files (use .example.json as templates)
+dev_mock_user.json
+dev_mock_authoriser.json

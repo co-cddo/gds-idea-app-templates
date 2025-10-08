@@ -1,0 +1,44 @@
+version: '3.8'
+
+# ============================================================================
+# DOCKER COMPOSE CONFIGURATION - SOURCE OF TRUTH
+# ============================================================================
+# This file defines ALL runtime configuration (ports, volumes, env vars).
+# Used by both:
+#   - VS Code dev containers (.devcontainer/devcontainer.json)
+#   - Smoke test script (smoke-test.sh)
+#
+# For VS Code-specific settings (extensions, editor config),
+# edit .devcontainer/devcontainer.json instead.
+# ============================================================================
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: app_src/Dockerfile
+      ssh:
+        - default  # Forward SSH agent for private Git dependencies
+
+    volumes:
+      # Mount app source for live editing and Streamlit auto-reload
+      - ../app_src:/app:cached
+
+      # Mount dev mock files directory (can be empty)
+      - ../dev_mocks:/app/dev_mocks:cached
+
+      # Persist UV cache across container rebuilds
+      - uv-cache:/root/.cache/uv
+
+    environment:
+      # Dev mode authentication (ADD YOUR ENV VARS HERE)
+      - COGNITO_AUTH_DEV_MODE=true
+      - COGNITO_AUTH_CONFIG_PATH=/app/dev_mocks/dev_mock_authoriser.json
+
+    ports:
+      - "8501:80"  # Map host port 8501 to container port 80
+
+    # Production Dockerfile CMD runs streamlit automatically on port 80
+
+volumes:
+  uv-cache:

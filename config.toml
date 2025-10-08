@@ -1,0 +1,17 @@
+# Infrastructure configuration for CDK deployment
+# This file is read by app.py to configure the WebApp construct
+
+[app]
+name = "streamlit-test"
+docker_context = "."
+dockerfile = "app_src/Dockerfile"
+
+[container]
+port = 80
+health_check_path = "/_stcore/health"
+cpu = 256
+memory = 512
+desired_count = 1
+
+# Auth config secret name will be automatically set to {app.name}/access
+# and passed to the container as COGNITO_AUTH_SECRET_NAME environment variable

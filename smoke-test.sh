@@ -1,65 +1,73 @@
 #!/bin/bash
 
+# ============================================================================
+# Smoke Test Script - Uses docker-compose for all configuration
+# ============================================================================
+# This script validates that the application builds and runs correctly.
+# All configuration (ports, volumes, env vars) comes from:
+#   .devcontainer/docker-compose.yml
+#
+# Usage:
+#   ./smoke-test.sh          # Run health check then exit
+#   ./smoke-test.sh --wait   # Keep running until you press Enter
+# ============================================================================
+
 # --- Configuration ---
-IMAGE_NAME="my-dumper-app"
-CONTAINER_NAME="dumper-test-container"
-HOST_PORT=8501
+COMPOSE_FILE=".devcontainer/docker-compose.yml"
+SERVICE_NAME="app"
 CONTAINER_PORT=80
-HEALTH_CHECK_URL="http://localhost:${HOST_PORT}/_stcore/health"
 MAX_WAIT_SECONDS=300
 CHECK_INTERVAL_SECONDS=2
 
 # --- Argument Parsing ---
-# Default behavior is to exit immediately after the health check.
-# If the --wait flag is passed, this will be set to true.
 WAIT_FOR_INPUT=false
 if [ "$1" == "--wait" ]; then
   WAIT_FOR_INPUT=true
 fi
 
 # --- Cleanup Function ---
-# This function runs when the script exits to ensure the container is stopped and removed.
 cleanup() {
   echo
   echo "---"
-  echo "🧹 Cleaning up test container..."
-  docker stop ${CONTAINER_NAME} > /dev/null 2>&1
-  docker rm ${CONTAINER_NAME} > /dev/null 2>&1
+  echo "🧹 Cleaning up..."
+  docker compose -f ${COMPOSE_FILE} down > /dev/null 2>&1
   echo "✅ Cleanup complete."
 }
 
-# Trap the script's exit signal to run the cleanup function automatically.
 trap cleanup EXIT
 
 # --- Main Script ---
-
-# Stop on the first error
 set -e
 
 echo "---"
-echo "🏗️  Building Docker image: ${IMAGE_NAME}"
-docker build --platform linux/amd64 -f src/Dockerfile -t ${IMAGE_NAME} .
+echo "🏗️  Building Docker image using docker-compose..."
+DOCKER_BUILDKIT=1 docker compose -f ${COMPOSE_FILE} build --ssh default
 
 echo "---"
-echo "🚀 Running container '${CONTAINER_NAME}' in the background..."
-docker run -d -p ${HOST_PORT}:${CONTAINER_PORT} --name ${CONTAINER_NAME} ${IMAGE_NAME}
+echo "🚀 Starting container in the background..."
+docker compose -f ${COMPOSE_FILE} up -d
+
+echo "---"
+echo "🔍 Detecting port mapping from docker-compose.yml..."
+HOST_PORT=$(docker compose -f ${COMPOSE_FILE} port ${SERVICE_NAME} ${CONTAINER_PORT} | cut -d: -f2)
+HEALTH_CHECK_URL="http://localhost:${HOST_PORT}/_stcore/health"
+echo "   Container port ${CONTAINER_PORT} mapped to host port ${HOST_PORT}"
 
 echo "---"
 echo "🩺 Performing health check, polling for up to ${MAX_WAIT_SECONDS} seconds..."
 
 SECONDS_WAITED=0
-# Loop until the health check passes or the timeout is reached
 until curl --fail -s -o /dev/null "${HEALTH_CHECK_URL}"; do
   if [ ${SECONDS_WAITED} -ge ${MAX_WAIT_SECONDS} ]; then
     echo # Newline for clean output
     echo "❌ Health check FAILED! The application did not respond in time."
     echo "---"
     echo "🗒️  Showing container logs for debugging:"
-    docker logs ${CONTAINER_NAME}
+    docker compose -f ${COMPOSE_FILE} logs
     exit 1
   fi
 
-  printf "." # Print a dot to show progress
+  printf "."
   sleep ${CHECK_INTERVAL_SECONDS}
   SECONDS_WAITED=$((SECONDS_WAITED + CHECK_INTERVAL_SECONDS))
 done
@@ -67,13 +75,11 @@ done
 echo # Newline for clean output
 echo "✅ Health check PASSED! The application is running correctly."
 
-# If the --wait flag was passed, pause here until the user presses Enter.
 if [ "$WAIT_FOR_INPUT" = true ]; then
   echo "---"
-  echo "➡️  Container '${CONTAINER_NAME}' is running on http://localhost:${HOST_PORT}"
+  echo "➡️  Container is running on http://localhost:${HOST_PORT}"
   echo "   --wait flag detected. Press [ENTER] to stop the container and clean up."
   read -r
 fi
 
-# The script exits here. The 'trap' will trigger the cleanup function.
 exit 0
