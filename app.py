@@ -4,7 +4,7 @@ import os
 import aws_cdk as cdk
 from aws_cdk import (
     Tags,
-    aws_iam as iam,
+    aws_secretsmanager as secretsmanager,
 )
 from gds_idea_cdk_constructs import EnvConfig
 from gds_idea_cdk_constructs.web_app import AuthType, WebApp, WebAppContainerProperties
@@ -42,16 +42,11 @@ stack = WebApp(
     ),
 )
 
-stack.task_role.add_to_policy(
-    iam.PolicyStatement(
-        effect=iam.Effect.ALLOW,
-        actions=[
-            "secretsmanager:GetSecretValue",
-        ],
-        resources=[
-            "arn:aws:secretsmanager:eu-west-2:992382722318:secret:streamlit-test/access-UKBGiP"
-        ],
-    )
+# Grant task role permission to read the Cognito auth secret
+# temp, this should be part of the web-app.
+secret = secretsmanager.Secret.from_secret_name_v2(
+    stack, "CognitoAuthSecret", secret_name=f"{APP_NAME}/access"
 )
+secret.grant_read(stack.task_role)
 
 app.synth()
