@@ -5,6 +5,9 @@ __pycache__
 .venv
 *.egg-info
 
+# UV
+uv.lock
+
 # CDK asset staging directory
 .cdk.staging
 cdk.out
