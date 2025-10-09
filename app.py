@@ -29,6 +29,10 @@ Tags.of(app).add("Repository", "TBA")
 Tags.of(app).add("AppName", APP_NAME)
 
 
+# Note: health_check_path varies by framework:
+# - Streamlit: "/_stcore/health"
+# - Dash: "/health"
+# - FastAPI: "/health"
 stack = WebApp(
     app,
     env_config=env_config,
@@ -37,7 +41,7 @@ stack = WebApp(
     docker_context_path=".",
     dockerfile_path="app_src/Dockerfile",
     container_props=WebAppContainerProperties(
-        health_check_path="/_stcore/health",
+        health_check_path="/health",
         environment_variables={"COGNITO_AUTH_SECRET_NAME": f"{APP_NAME}/access"},
     ),
 )

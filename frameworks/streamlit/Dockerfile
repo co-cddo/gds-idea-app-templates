@@ -32,9 +32,9 @@ COPY app_src/ .
 # Expose port
 EXPOSE 80
 
-# Health check (Dash custom endpoint)
-HEALTHCHECK CMD curl --fail http://localhost:80/health || exit 1
+# Health check
+HEALTHCHECK CMD curl --fail http://localhost:80/_stcore/health || exit 1
 
-# Run Dash via gunicorn (production mode)
+# Run streamlit using uv (production mode)
 # Dev container will keep this running via docker-compose volumes
-CMD ["uv", "run", "gunicorn", "dash_app:server", "-b", "0.0.0.0:80", "--workers", "1"]
+CMD ["uv", "run", "streamlit", "run", "streamlit_app.py", "--server.port", "80"]
