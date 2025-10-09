@@ -29,6 +29,10 @@ Tags.of(app).add("Repository", "TBA")
 Tags.of(app).add("AppName", APP_NAME)
 
 
+# Note: health_check_path varies by framework:
+# - Streamlit: "/_stcore/health"
+# - Dash: "/health"
+# - FastAPI: "/health"
 stack = WebApp(
     app,
     env_config=env_config,

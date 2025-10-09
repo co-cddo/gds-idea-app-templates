@@ -1,0 +1,40 @@
+FROM python:3.13
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends git curl ca-certificates sudo \
+ && rm -rf /var/lib/apt/lists/*
+
+# Install UV
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# Create non-root vscode user for dev container compatibility
+ARG USERNAME=vscode
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+    && chmod 0440 /etc/sudoers.d/$USERNAME
+
+# Copy app dependency files
+COPY app_src/pyproject.toml ./
+
+# Sync dependencies using UV (public HTTPS repos, no SSH needed)
+RUN uv sync
+
+# Copy application code
+COPY app_src/ .
+
+# Expose port
+EXPOSE 80
+
+# Health check (Dash custom endpoint)
+HEALTHCHECK CMD curl --fail http://localhost:80/health || exit 1
+
+# Run Dash via gunicorn (production mode)
+# Dev container will keep this running via docker-compose volumes
+CMD ["uv", "run", "gunicorn", "dash_app:server", "-b", "0.0.0.0:80", "--workers", "1"]
