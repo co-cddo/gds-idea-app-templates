@@ -1,5 +1,5 @@
 [project]
-name = "dumper"
+name = "streamlit-example-app"
 version = "0.1.0"
 description = "AWS CDK infrastructure for deploying Streamlit apps with Cognito auth"
 readme = "README.md"
@@ -15,10 +15,6 @@ dependencies = [
 dev = [
     "pytest>=6.2.5",
 ]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
 
 [tool.uv]
 dev-dependencies = [

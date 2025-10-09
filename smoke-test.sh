@@ -30,7 +30,7 @@ cleanup() {
   echo
   echo "---"
   echo "🧹 Cleaning up..."
-  docker compose -f ${COMPOSE_FILE} down > /dev/null 2>&1
+  docker-compose -f ${COMPOSE_FILE} down > /dev/null 2>&1
   echo "✅ Cleanup complete."
 }
 
@@ -41,15 +41,15 @@ set -e
 
 echo "---"
 echo "🏗️  Building Docker image using docker-compose..."
-DOCKER_BUILDKIT=1 docker compose -f ${COMPOSE_FILE} build --ssh default
+docker-compose -f ${COMPOSE_FILE} build
 
 echo "---"
 echo "🚀 Starting container in the background..."
-docker compose -f ${COMPOSE_FILE} up -d
+docker-compose -f ${COMPOSE_FILE} up -d
 
 echo "---"
 echo "🔍 Detecting port mapping from docker-compose.yml..."
-HOST_PORT=$(docker compose -f ${COMPOSE_FILE} port ${SERVICE_NAME} ${CONTAINER_PORT} | cut -d: -f2)
+HOST_PORT=$(docker-compose -f ${COMPOSE_FILE} port ${SERVICE_NAME} ${CONTAINER_PORT} | cut -d: -f2)
 HEALTH_CHECK_URL="http://localhost:${HOST_PORT}/_stcore/health"
 echo "   Container port ${CONTAINER_PORT} mapped to host port ${HOST_PORT}"
 
@@ -63,7 +63,7 @@ until curl --fail -s -o /dev/null "${HEALTH_CHECK_URL}"; do
     echo "❌ Health check FAILED! The application did not respond in time."
     echo "---"
     echo "🗒️  Showing container logs for debugging:"
-    docker compose -f ${COMPOSE_FILE} logs
+    docker-compose -f ${COMPOSE_FILE} logs
     exit 1
   fi
 

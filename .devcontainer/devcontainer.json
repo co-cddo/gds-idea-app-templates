@@ -3,7 +3,6 @@
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/app",
-
   // ========================================================================
   // VS CODE CONFIGURATION - CUSTOMIZE AS NEEDED
   // ========================================================================
@@ -12,15 +11,13 @@
   // - Dev container features (git, gh CLI, etc.)
   //
   // For runtime configuration (env vars, ports, volumes),
-  // edit docker-compose.yml instead.
+  // edit docker-compose.yml instead./
   // ========================================================================
-
   // Additional dev container features
   "features": {
     "ghcr.io/devcontainers/features/git:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
-
   // VS Code customizations (ADD YOUR EXTENSIONS HERE)
   "customizations": {
     "vscode": {
@@ -46,19 +43,18 @@
       }
     }
   },
-
   // Forward Streamlit port
-  "forwardPorts": [8501],
+  "forwardPorts": [
+    8501
+  ],
   "portsAttributes": {
     "8501": {
       "label": "Streamlit",
       "onAutoForward": "notify"
     }
   },
-
   // Post-create command: sync dependencies
   "postCreateCommand": "uv sync",
-
   // Run as non-root user
   "remoteUser": "vscode"
 }

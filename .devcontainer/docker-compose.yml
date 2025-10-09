@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 # ============================================================================
 # DOCKER COMPOSE CONFIGURATION - SOURCE OF TRUTH
@@ -17,8 +17,6 @@ services:
     build:
       context: ..
       dockerfile: app_src/Dockerfile
-      ssh:
-        - default  # Forward SSH agent for private Git dependencies
 
     volumes:
       # Mount app source for live editing and Streamlit auto-reload
@@ -34,9 +32,10 @@ services:
       # Dev mode authentication (ADD YOUR ENV VARS HERE)
       - COGNITO_AUTH_DEV_MODE=true
       - COGNITO_AUTH_CONFIG_PATH=/app/dev_mocks/dev_mock_authoriser.json
+      - COGNITO_AUTH_DEV_CONFIG=/app/dev_mocks/dev_mock_user.json
 
     ports:
-      - "8501:80"  # Map host port 8501 to container port 80
+      - "8501:80" # Map host port 8501 to container port 80
 
     # Production Dockerfile CMD runs streamlit automatically on port 80
 

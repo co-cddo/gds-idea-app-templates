@@ -4,24 +4,29 @@ WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update \
- && apt-get install -y --no-install-recommends git openssh-client curl ca-certificates \
+ && apt-get install -y --no-install-recommends git curl ca-certificates sudo \
  && rm -rf /var/lib/apt/lists/*
 
 # Install UV
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Add GitHub to known_hosts to avoid "Host key verification failed"
-RUN mkdir -p -m 0700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
+# Create non-root vscode user for dev container compatibility
+ARG USERNAME=vscode
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+    && chmod 0440 /etc/sudoers.d/$USERNAME
 
 # Copy app dependency files
 COPY app_src/pyproject.toml ./
 
-# Sync dependencies using UV with SSH forwarding for private git dependencies
-# Build with: DOCKER_BUILDKIT=1 docker build --ssh default -t dumper:latest -f app_src/Dockerfile .
-# This creates a .venv with all dependencies
-RUN --mount=type=ssh uv sync
+# Sync dependencies using UV (public HTTPS repos, no SSH needed)
+RUN uv sync
 
-# Copy application
+# Copy application code
 COPY app_src/ .
 
 # Expose port
@@ -30,5 +35,6 @@ EXPOSE 80
 # Health check
 HEALTHCHECK CMD curl --fail http://localhost:80/_stcore/health || exit 1
 
-# Run streamlit using uv
+# Run streamlit using uv (production mode)
+# Dev container will keep this running via docker-compose volumes
 CMD ["uv", "run", "streamlit", "run", "streamlit_app.py", "--server.port", "80"]
