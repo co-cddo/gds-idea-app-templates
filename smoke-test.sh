@@ -39,6 +39,44 @@ trap cleanup EXIT
 # --- Main Script ---
 set -e
 
+# --- Validation: Check framework/health_check_path match ---
+echo "---"
+echo "🔍 Validating framework and health_check_path configuration..."
+
+# Detect framework from Dockerfile CMD
+if grep -q "streamlit" app_src/Dockerfile; then
+  DETECTED_FRAMEWORK="streamlit"
+  EXPECTED_HEALTH_PATH="/_stcore/health"
+elif grep -q "gunicorn.*dash_app" app_src/Dockerfile; then
+  DETECTED_FRAMEWORK="dash"
+  EXPECTED_HEALTH_PATH="/health"
+elif grep -q "uvicorn.*fastapi_app" app_src/Dockerfile; then
+  DETECTED_FRAMEWORK="fastapi"
+  EXPECTED_HEALTH_PATH="/health"
+else
+  echo "⚠️  Warning: Could not detect framework from Dockerfile"
+  DETECTED_FRAMEWORK="unknown"
+  EXPECTED_HEALTH_PATH=""
+fi
+
+# Check health_check_path in app.py if framework was detected
+if [ -n "$EXPECTED_HEALTH_PATH" ]; then
+  if ! grep -q "health_check_path=\"${EXPECTED_HEALTH_PATH}\"" app.py; then
+    echo "❌ ERROR: Framework/health_check_path mismatch detected!"
+    echo ""
+    echo "   Detected framework: $DETECTED_FRAMEWORK"
+    echo "   Expected health_check_path: \"$EXPECTED_HEALTH_PATH\""
+    echo ""
+    echo "   Current app.py setting:"
+    grep "health_check_path=" app.py | head -1
+    echo ""
+    echo "💡 Fix: Run './setup.sh $DETECTED_FRAMEWORK' to auto-correct"
+    echo ""
+    exit 1
+  fi
+  echo "✅ Configuration valid: $DETECTED_FRAMEWORK with health_check_path=\"$EXPECTED_HEALTH_PATH\""
+fi
+
 echo "---"
 echo "🏗️  Building Docker image using docker-compose..."
 docker-compose -f ${COMPOSE_FILE} build
@@ -50,8 +88,15 @@ docker-compose -f ${COMPOSE_FILE} up -d
 echo "---"
 echo "🔍 Detecting port mapping from docker-compose.yml..."
 HOST_PORT=$(docker-compose -f ${COMPOSE_FILE} port ${SERVICE_NAME} ${CONTAINER_PORT} | cut -d: -f2)
-HEALTH_CHECK_URL="http://localhost:${HOST_PORT}/_stcore/health"
+
+# Use the detected health path from validation, or default to /health
+if [ -z "$EXPECTED_HEALTH_PATH" ]; then
+  EXPECTED_HEALTH_PATH="/health"
+fi
+
+HEALTH_CHECK_URL="http://localhost:${HOST_PORT}${EXPECTED_HEALTH_PATH}"
 echo "   Container port ${CONTAINER_PORT} mapped to host port ${HOST_PORT}"
+echo "   Health check endpoint: ${EXPECTED_HEALTH_PATH}"
 
 echo "---"
 echo "🩺 Performing health check, polling for up to ${MAX_WAIT_SECONDS} seconds..."

@@ -14,12 +14,14 @@ if [ $# -eq 0 ]; then
   echo "Available frameworks:"
   echo "  1) streamlit"
   echo "  2) dash"
+  echo "  3) fastapi"
   echo ""
-  read -p "Choose a framework (1-2): " choice
+  read -p "Choose a framework (1-3): " choice
 
   case $choice in
     1) FRAMEWORK="streamlit" ;;
     2) FRAMEWORK="dash" ;;
+    3) FRAMEWORK="fastapi" ;;
     *)
       echo "❌ Invalid choice. Exiting."
       exit 1
@@ -40,7 +42,7 @@ elif [ $# -eq 2 ]; then
 
 else
   echo "Usage: $0 [framework] [app-name]"
-  echo "  framework: streamlit, dash"
+  echo "  framework: streamlit, dash, fastapi"
   echo "  app-name: optional, name for your application"
   exit 1
 fi
@@ -60,6 +62,26 @@ cp "frameworks/$FRAMEWORK/pyproject.toml" app_src/
 cp frameworks/$FRAMEWORK/*.py app_src/ 2>/dev/null || true
 
 echo "✅ Copied $FRAMEWORK files to app_src/"
+
+# Auto-update health_check_path in app.py based on framework
+case $FRAMEWORK in
+  streamlit)
+    HEALTH_PATH="/_stcore/health"
+    ;;
+  dash|fastapi)
+    HEALTH_PATH="/health"
+    ;;
+esac
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  # macOS
+  sed -i '' "s|health_check_path=\"[^\"]*\"|health_check_path=\"${HEALTH_PATH}\"|" app.py
+else
+  # Linux
+  sed -i "s|health_check_path=\"[^\"]*\"|health_check_path=\"${HEALTH_PATH}\"| " app.py
+fi
+
+echo "✅ Updated health_check_path to \"$HEALTH_PATH\""
 
 # Update app name in app.py if provided
 if [ -n "$APP_NAME" ]; then
@@ -91,16 +113,7 @@ echo ""
 echo "🎉 Setup complete!"
 echo ""
 echo "Next steps:"
-echo "  1. Update health_check_path in app.py if needed:"
-case $FRAMEWORK in
-  streamlit)
-    echo "     health_check_path=\"/_stcore/health\""
-    ;;
-  dash)
-    echo "     health_check_path=\"/health\""
-    ;;
-esac
-echo "  2. Run locally:"
+echo "  1. Run locally:"
 case $FRAMEWORK in
   streamlit)
     echo "     cd app_src && uv run streamlit run streamlit_app.py"
@@ -108,8 +121,11 @@ case $FRAMEWORK in
   dash)
     echo "     cd app_src && uv run gunicorn dash_app:server"
     ;;
+  fastapi)
+    echo "     cd app_src && uv run uvicorn fastapi_app:app --reload"
+    ;;
 esac
-echo "  3. Test with: ./smoke-test.sh"
-echo "  4. Deploy with: cdk deploy"
+echo "  2. Test with: ./smoke-test.sh"
+echo "  3. Deploy with: cdk deploy"
 echo ""
 echo "💡 You can switch frameworks anytime by running this script again!"
