@@ -210,6 +210,64 @@ Applications use the `cognito-auth` library to extract and validate these header
 5. **Deploy**: `cdk deploy` to AWS
 6. **Iterate**: Switch frameworks anytime with `uv run configure`
 
+## AWS Authentication for Dev Container (Optional)
+
+If your application needs AWS access during development (e.g., to access S3, DynamoDB, etc.), you can provide AWS credentials to the dev container.
+
+### Understanding the Two-Role Model
+
+There are **two different AWS roles** in this project:
+
+1. **Deployment Role** - Your personal AWS role used to run `cdk deploy` (you already have this)
+2. **Runtime Role** - The role your application needs when running in the container (what `provide-role` sets up)
+
+### Setup
+
+1. **Configure the runtime role** in `pyproject.toml`:
+
+```toml
+[tool.webapp.dev]
+aws_role_arn = "arn:aws:iam::123456789012:role/AppRuntimeRole"
+aws_region = "eu-west-2"  # Optional, defaults to eu-west-2
+```
+
+2. **Provide credentials to the container** (run on your HOST machine):
+
+```bash
+# Interactive - prompts for MFA code
+uv run provide-role
+
+# Non-interactive
+uv run provide-role --mfa-code 123456
+
+# Custom duration (1 hour instead of default 12 hours)
+uv run provide-role --mfa-code 123456 --duration 3600
+```
+
+3. **Credentials are immediately available** in the dev container (no restart needed!)
+
+```bash
+# Inside dev container
+aws sts get-caller-identity
+# Your app now has AWS access
+```
+
+### How It Works
+
+- MFA device is auto-detected from your AWS configuration
+- Temporary credentials are written to `.aws-dev/` on your host (gitignored)
+- This directory is mounted into the container at `/home/vscode/.aws/`
+- AWS SDK/CLI automatically uses these credentials
+- Credentials expire after 12 hours by default
+- To refresh: just re-run `uv run provide-role` on your host
+
+### Notes
+
+- ⚠️ This is **optional** - only needed if your app requires AWS access during development
+- ✅ Credentials update **live** - no container restart needed
+- ✅ Completely separate from CDK deployment credentials
+- ✅ Standard AWS credentials format (`[default]` profile)
+
 ## Switching Frameworks
 
 ```bash

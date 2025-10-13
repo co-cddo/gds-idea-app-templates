@@ -1,11 +1,10 @@
 [project]
-name = "fastapi-app"
+name = "streamlit-app"
 version = "0.1.0"
-description = "FastAPI app with Cognito authentication"
+description = "Streamlit app with Cognito authentication"
 requires-python = ">=3.12"
 dependencies = [
-    "cognito-auth[fastapi] @ git+https://github.com/co-cddo/gds-idea-app-auth.git@v0.1.2",
-    "uvicorn[standard]>=0.27.0",
+    "cognito-auth[streamlit] @ git+https://github.com/co-cddo/gds-idea-app-auth.git@v0.1.2",
 ]
 
 [tool.ruff]
@@ -24,4 +23,4 @@ select = [
 ignore = []
 
 [tool.ruff.lint.isort]
-known-first-party = ["fastapi-app"]
+known-first-party = ["streamlit-app"]
