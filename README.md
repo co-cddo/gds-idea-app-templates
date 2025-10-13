@@ -1,58 +1,231 @@
+# Web App Template with AWS Cognito Authentication
 
-# Welcome to your CDK Python project!
+A template repository for deploying Streamlit, Dash, or FastAPI applications to AWS ECS with Cognito authentication behind an Application Load Balancer.
 
-This is a blank project for CDK development with Python.
+## Features
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+- 🚀 **Multi-framework support**: Choose between Streamlit, Dash, or FastAPI
+- 🔐 **Built-in authentication**: AWS Cognito integration with ALB
+- 🐳 **Docker-based deployment**: ECS Fargate with auto-scaling
+- 📦 **Infrastructure as Code**: AWS CDK for reproducible deployments
+- 🛠️ **Dev container ready**: VS Code dev containers for instant development environment
+- ✅ **Smoke testing**: Validate builds and health checks before deployment
 
-This project is set up like a standard Python project.  The initialization
-process also creates a virtualenv within this project, stored under the `.venv`
-directory.  To create the virtualenv it assumes that there is a `python3`
-(or `python` for Windows) executable in your path with access to the `venv`
-package. If for any reason the automatic creation of the virtualenv fails,
-you can create the virtualenv manually.
+## Quick Start
 
-To manually create a virtualenv on MacOS and Linux:
+### Prerequisites
 
-```
-$ python3 -m venv .venv
-```
+- [UV](https://docs.astral.sh/uv/) - Modern Python package manager
+- [AWS CLI](https://aws.amazon.com/cli/) configured with credentials
+- [Docker](https://www.docker.com/) (optional, for local testing)
+- [VS Code](https://code.visualstudio.com/) with Dev Containers extension (recommended)
 
-After the init process completes and the virtualenv is created, you can use the following
-step to activate your virtualenv.
+### 1. Clone and Install
 
-```
-$ source .venv/bin/activate
-```
-
-If you are a Windows platform, you would activate the virtualenv like this:
-
-```
-% .venv\Scripts\activate.bat
+```bash
+git clone <this-repo>
+cd <repo-name>
+uv sync
 ```
 
-Once the virtualenv is activated, you can install the required dependencies.
+### 2. Configure Your App
+
+Choose your app name and framework:
+
+```bash
+# Set app name and framework (streamlit, dash, or fastapi)
+uv run configure my-app streamlit
+
+# This updates pyproject.toml and copies framework files to app_src/
+```
+
+Or edit `pyproject.toml` manually:
+
+```toml
+[tool.webapp]
+app_name = "my-app"
+framework = "streamlit"  # or "dash" or "fastapi"
+```
+
+Then sync:
+
+```bash
+uv run configure
+```
+
+### 3. Develop
+
+**Option A: VS Code Dev Container (Recommended)**
+
+1. Open in VS Code
+2. Click "Reopen in Container" when prompted
+3. Dependencies auto-install, dev environment ready
+4. Run your app inside the container
+
+**Option B: Smoke Test**
+
+```bash
+# Build and test with Docker
+uv run smoke_test --wait
+
+# Then open http://localhost:8501
+```
+
+### 4. Deploy to AWS
+
+```bash
+# Set AWS environment
+export CDK_DEFAULT_ACCOUNT=123456789012
+export CDK_DEFAULT_REGION=eu-west-2
+
+# Deploy
+cdk deploy
+```
+
+## Project Structure
 
 ```
-$ pip install -r requirements.txt
+.
+├── app.py                      # CDK infrastructure definition
+├── pyproject.toml              # Project config (includes [tool.webapp])
+├── cdk.json                    # CDK configuration
+│
+├── template/                   # Template tooling
+│   ├── configure.py            # Configuration script
+│   ├── smoke_test.py           # Docker smoke test
+│   └── frameworks/             # Framework templates
+│       ├── streamlit/
+│       ├── dash/
+│       └── fastapi/
+│
+├── app_src/                    # Active application (generated)
+│   ├── Dockerfile
+│   ├── pyproject.toml
+│   └── <framework>_app.py
+│
+└── .devcontainer/              # VS Code dev container config
+    └── docker-compose.yml
 ```
 
-At this point you can now synthesize the CloudFormation template for this code.
+## Available Commands
 
+### Template Configuration
+
+```bash
+# Configure with CLI arguments
+uv run configure <app-name> <framework>
+
+# Sync from pyproject.toml (after manual edit)
+uv run configure
 ```
-$ cdk synth
+
+### Testing
+
+```bash
+# Smoke test (quick validation)
+uv run smoke_test
+
+# Smoke test with interactive wait
+uv run smoke_test --wait
 ```
 
-To add additional dependencies, for example other CDK libraries, just add
-them to your `setup.py` file and rerun the `pip install -r requirements.txt`
-command.
+### CDK Commands
 
-## Useful commands
+```bash
+# Synthesize CloudFormation template
+cdk synth
 
- * `cdk ls`          list all stacks in the app
- * `cdk synth`       emits the synthesized CloudFormation template
- * `cdk deploy`      deploy this stack to your default AWS account/region
- * `cdk diff`        compare deployed stack with current state
- * `cdk docs`        open CDK documentation
+# List stacks
+cdk ls
 
-Enjoy!
+# Compare with deployed stack
+cdk diff
+
+# Deploy
+cdk deploy
+
+# Destroy
+cdk destroy
+```
+
+## Frameworks
+
+### Streamlit
+
+- Built-in health endpoint: `/_stcore/health`
+- Uses `StreamlitAuth` helper from `cognito-auth` library
+- Simple, Pythonic UI development
+
+### Dash
+
+- Custom health endpoint: `/health`
+- Uses `DashAuth` helper from `cognito-auth` library
+- Plotly-based dashboards with callback architecture
+
+### FastAPI
+
+- Custom health endpoint: `/health`
+- Uses `FastAPIAuth` middleware from `cognito-auth` library
+- High-performance async API framework
+
+## Architecture
+
+The infrastructure uses custom CDK constructs from `gds-idea-cdk-constructs`:
+
+- **Application Load Balancer** with Cognito authentication
+- **ECS Fargate** for container orchestration
+- **Auto-scaling** based on CPU/memory
+- **CloudWatch** logging and monitoring
+
+Configuration is managed through `pyproject.toml`:
+
+```python
+# app.py
+app_config = AppConfig.from_pyproject()
+env_config = EnvConfig(cdk_env)
+
+stack = WebApp(
+    app,
+    env_config=env_config,
+    app_config=app_config,
+    authentication=AuthType.COGNITO,
+)
+```
+
+## Authentication
+
+The ALB injects Cognito authentication headers:
+
+- `x-amzn-oidc-data`: JWT with user claims (email, username, etc.)
+- `x-amzn-oidc-accesstoken`: Cognito access token with groups
+
+Applications use the `cognito-auth` library to extract and validate these headers.
+
+## Development Workflow
+
+1. **Configure**: `uv run configure my-app streamlit`
+2. **Develop**: Open in VS Code dev container or run `uv run smoke_test --wait`
+3. **Customize**: Edit `app_src/<framework>_app.py`
+4. **Test**: Smoke test validates build and health checks
+5. **Deploy**: `cdk deploy` to AWS
+6. **Iterate**: Switch frameworks anytime with `uv run configure`
+
+## Switching Frameworks
+
+```bash
+# Switch to FastAPI
+uv run configure my-app fastapi
+
+# Or edit pyproject.toml and sync
+uv run configure
+```
+
+This updates the configuration and copies new framework files to `app_src/`.
+
+## License
+
+[Your License Here]
+
+## Contributing
+
+[Your Contributing Guidelines Here]
