@@ -6,7 +6,7 @@ version: "3.8"
 # This file defines ALL runtime configuration (ports, volumes, env vars).
 # Used by both:
 #   - VS Code dev containers (.devcontainer/devcontainer.json)
-#   - Smoke test script (smoke-test.sh)
+#   - Smoke test script (uv run smoke_test)
 #
 # For VS Code-specific settings (extensions, editor config),
 # edit .devcontainer/devcontainer.json instead.
@@ -36,8 +36,6 @@ services:
 
     ports:
       - "8501:80" # Map host port 8501 to container port 80
-
-    # Production Dockerfile CMD runs streamlit automatically on port 80
 
 volumes:
   uv-cache:

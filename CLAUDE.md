@@ -11,10 +11,11 @@ The project showcases two custom libraries:
 - **`cognito-auth`**: Authentication helpers for Streamlit and FastAPI that extract user info from ALB headers
 
 Data scientists can use this as a starting point by:
-1. Copying the repository structure
-2. Choosing one of the example applications (Streamlit, Dash, or FastAPI)
-3. Modifying `app.py` to configure their deployment
-4. Customizing the application code in `src/`
+1. Cloning the repository
+2. Running `uv run configure <app-name> <framework>` to configure their app (streamlit, dash, or fastapi)
+3. Developing in VS Code dev container (recommended) or testing with `uv run smoke_test --wait`
+4. Customizing the application code in `app_src/`
+5. Deploying with `cdk deploy`
 
 ## Development Commands
 
@@ -78,21 +79,28 @@ export CDK_DEFAULT_ACCOUNT=123456789012
 export CDK_DEFAULT_REGION=eu-west-2
 ```
 
-### Docker Testing
+### Template Configuration
+
+```bash
+# Configure app name and framework (updates pyproject.toml and copies framework files)
+uv run configure <app-name> <framework>
+uv run configure my-app streamlit
+
+# Or edit pyproject.toml [tool.webapp] manually and sync:
+uv run configure
+```
+
+### Docker Testing (Smoke Test)
 
 ```bash
 # Build and run smoke test (exits after health check)
-./smoke-test.sh
+uv run smoke_test
 
 # Build and run with interactive wait (press Enter to stop)
-./smoke-test.sh --wait
-
-# Manual Docker build (requires SSH agent for private Git dependencies)
-DOCKER_BUILDKIT=1 docker build --ssh default -t dumper:latest -f src/Dockerfile .
-
-# Run container locally
-docker run -d -p 8501:80 --name dumper-container dumper:latest
+uv run smoke_test --wait
 ```
+
+The smoke test validates your configuration and builds/tests the Docker container using docker-compose.
 
 ### Testing
 
@@ -110,30 +118,48 @@ pytest -v
 
 The main CDK app (`app.py`) defines the infrastructure using the `WebApp` construct from `gds-idea-cdk-constructs`:
 
+- **AppConfig**: Reads configuration from `pyproject.toml [tool.webapp]` (app name, framework)
 - **WebApp Construct**: Creates an ECS Fargate service behind an ALB with Cognito authentication
 - **Authentication**: Uses `AuthType.COGNITO` for AWS Cognito User Pool integration
-- **Container**: Runs on port 80, health check at `/_stcore/health` (Streamlit endpoint)
+- **Health Check**: Auto-detected based on framework (streamlit: `/_stcore/health`, dash/fastapi: `/health`)
 - **Environment**: Configured via `EnvConfig` which reads from CDK environment variables
 
-### Application Code (src/)
+The simplified infrastructure:
+```python
+app_config = AppConfig.from_pyproject()
+env_config = EnvConfig(cdk_env)
 
-The repository contains multiple web application implementations:
+stack = WebApp(
+    app,
+    env_config=env_config,
+    app_config=app_config,
+    authentication=AuthType.COGNITO,
+)
+```
 
-1. **streamlit_app.py** (Currently deployed)
+### Application Code (app_src/)
+
+The `app_src/` directory contains the active web application. Framework files are copied from `template/frameworks/` when you run `uv run configure`.
+
+Available framework templates:
+
+1. **streamlit_app.py** (Streamlit)
    - Streamlit application with Cognito authentication
    - Uses `cognito-auth` library with `StreamlitAuth` helper
    - Displays user information and JWT claims from ALB headers
-   - Authorization based on groups (`gds-idea`) or specific email addresses
+   - Authorization based on groups or specific email addresses
 
-2. **dash_app.py** (Alternative)
-   - Dash/Plotly application
-   - Uses `cognito_user` library with Dash helpers
-   - Decorator-based authentication with domain restrictions
+2. **dash_app.py** (Dash)
+   - Dash/Plotly application with Flask backend
+   - Uses `cognito-auth` library with `DashAuth` helper
+   - Callback-based authentication to avoid Flask context issues
+   - Custom `/health` endpoint
 
-3. **dumper_app.py** (Debugging tool)
-   - FastAPI application that displays all ALB headers
-   - Useful for debugging authentication and JWT token flow
-   - Decodes and displays OIDC data and access tokens
+3. **fastapi_app.py** (FastAPI)
+   - FastAPI application with app-wide authentication middleware
+   - Uses `cognito-auth` library with `FastAPIAuth` helper
+   - All routes protected by default
+   - Custom `/health` endpoint
 
 ### Authentication Flow
 
@@ -158,17 +184,28 @@ Both are installed via SSH (`git+ssh://git@github.com/...`) and require:
 
 ## Key Files
 
-- `app.py` - CDK infrastructure definition
-- `src/Dockerfile` - Multi-stage Docker build with SSH key forwarding
-- `src/streamlit_app.py` - Main Streamlit application
-- `src/idea_auth.py` - Token decoding utilities and OAuth2 helpers
-- `smoke-test.sh` - Local Docker testing script
+### Root Level
+- `app.py` - CDK infrastructure definition (reads from pyproject.toml)
+- `pyproject.toml` - Project configuration including `[tool.webapp]` for app name and framework
 - `cdk.json` - CDK configuration and feature flags
+
+### Template Directory
+- `template/configure.py` - Configuration script to set app name and framework (run via `uv run configure`)
+- `template/smoke_test.py` - Docker build and health check validation (run via `uv run smoke_test`)
+- `template/frameworks/` - Framework template files (streamlit, dash, fastapi)
+  - Each contains: Dockerfile, pyproject.toml, and framework-specific app.py
+
+### Application
+- `app_src/` - Active web application (populated by configure script)
+  - Contains the selected framework's files
+  - Dockerfile, pyproject.toml, and app file
 
 ## Important Notes
 
-- The Dockerfile uses BuildKit's SSH forwarding to install private Git dependencies at build time
-- Always use `DOCKER_BUILDKIT=1 docker build --ssh default` when building locally
-- The health check endpoint is `/_stcore/health` (Streamlit-specific)
-- Container runs on port 80 internally, typically mapped to 8501 for local testing
-- Authentication requires valid Cognito tokens in ALB headers - local testing without ALB will not have authentication
+- **Configuration**: App name and framework are stored in `pyproject.toml [tool.webapp]` as the single source of truth
+- **Framework Switching**: Run `uv run configure <app-name> <framework>` to switch frameworks - it updates config and copies the correct files to `app_src/`
+- **Health Check Paths**: Auto-detected by framework (Streamlit: `/_stcore/health`, Dash/FastAPI: `/health`)
+- **Docker**: The Dockerfile uses BuildKit's SSH forwarding to install private Git dependencies at build time
+- **Dev Workflow**: Prefer VS Code dev containers for development, or use `uv run smoke_test --wait` for quick testing
+- **Container**: Runs on port 80 internally, mapped to 8501 for local testing
+- **Authentication**: Requires valid Cognito tokens in ALB headers - local testing without ALB will not have authentication
