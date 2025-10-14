@@ -32,9 +32,9 @@ COPY app_src/ .
 # Expose port
 EXPOSE 80
 
-# Health check (FastAPI custom endpoint)
-HEALTHCHECK CMD curl --fail http://localhost:80/health || exit 1
+# Health check
+HEALTHCHECK CMD curl --fail http://localhost:80/_stcore/health || exit 1
 
-# Run FastAPI via uvicorn (production mode)
+# Run streamlit using uv (production mode)
 # Dev container will keep this running via docker-compose volumes
-CMD ["uv", "run", "uvicorn", "fastapi_app:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uv", "run", "streamlit", "run", "streamlit_app.py", "--server.port", "80"]

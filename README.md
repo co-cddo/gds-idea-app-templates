@@ -1,13 +1,12 @@
 # Web App Template with AWS Cognito Authentication
 
-A template repository for deploying Streamlit, Dash, or FastAPI applications to AWS ECS with Cognito authentication behind an Application Load Balancer.
+A template repository for deploying Streamlit, Dash, or FastAPI applications easily 
+within the gds-idea infrastructure.
 
 ## Features
 
 - 🚀 **Multi-framework support**: Choose between Streamlit, Dash, or FastAPI
-- 🔐 **Built-in authentication**: AWS Cognito integration with ALB
-- 🐳 **Docker-based deployment**: ECS Fargate with auto-scaling
-- 📦 **Infrastructure as Code**: AWS CDK for reproducible deployments
+- 🔐 **Built-in authentication**: GDS-IDEA team cognito
 - 🛠️ **Dev container ready**: VS Code dev containers for instant development environment
 - ✅ **Smoke testing**: Validate builds and health checks before deployment
 
@@ -17,15 +16,20 @@ A template repository for deploying Streamlit, Dash, or FastAPI applications to 
 
 - [UV](https://docs.astral.sh/uv/) - Modern Python package manager
 - [AWS CLI](https://aws.amazon.com/cli/) configured with credentials
-- [Docker](https://www.docker.com/) (optional, for local testing)
-- [VS Code](https://code.visualstudio.com/) with Dev Containers extension (recommended)
+- [AWS CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting-started.html)
+- [Docker runtime](https://www.docker.com/) (optional, for local testing, colima recommended)
+- [VS Code](https://code.visualstudio.com/) with Dev Containers extension 
+
+If you need to install any of the above it is recommended to use [brew](https://brew.sh/)
 
 ### 1. Clone and Install
 
 ```bash
 git clone <this-repo>
 cd <repo-name>
-uv sync
+uv sync[streamlit] # or 
+# uv sync[fastapi] # or
+# uv sync[dash]
 ```
 
 ### 2. Configure Your App
@@ -74,9 +78,8 @@ uv run smoke_test --wait
 ### 4. Deploy to AWS
 
 ```bash
-# Set AWS environment
-export CDK_DEFAULT_ACCOUNT=123456789012
-export CDK_DEFAULT_REGION=eu-west-2
+# Set AWS environment - you should have this configured already.
+export AWS_PROFILE=you-dev-profile
 
 # Deploy
 cdk deploy
@@ -86,11 +89,11 @@ cdk deploy
 
 ```
 .
-├── app.py                      # CDK infrastructure definition
+├── app.py                      # CDK infrastructure definition - modify this
 ├── pyproject.toml              # Project config (includes [tool.webapp])
 ├── cdk.json                    # CDK configuration
 │
-├── template/                   # Template tooling
+├── template/                   # Template tooling (DO NOT edit manually)
 │   ├── configure.py            # Configuration script
 │   ├── smoke_test.py           # Docker smoke test
 │   └── frameworks/             # Framework templates
@@ -98,10 +101,10 @@ cdk deploy
 │       ├── dash/
 │       └── fastapi/
 │
-├── app_src/                    # Active application (generated)
-│   ├── Dockerfile
-│   ├── pyproject.toml
-│   └── <framework>_app.py
+├── app_src/                    # Active application (generated) add your app here.
+│   ├── Dockerfile              # This will be configured for your framework
+│   ├── pyproject.toml          # Add app dependencies here, cd app_src then uv add
+│   └── <framework>_app.py.     # Modify the template
 │
 └── .devcontainer/              # VS Code dev container config
     └── docker-compose.yml
@@ -121,6 +124,10 @@ uv run configure
 
 ### Testing
 
+A utility to check the docker build as expected is included. It will build the container, 
+start it up, ping the health check address and clean up. If this runs you can be 
+confident when you deploy that it will work.
+
 ```bash
 # Smoke test (quick validation)
 uv run smoke_test
@@ -128,6 +135,10 @@ uv run smoke_test
 # Smoke test with interactive wait
 uv run smoke_test --wait
 ```
+
+Running with the `--wait` command delays shutting down and cleaning up the container 
+until you hit a key. This allows you to access the app locally. 
+
 
 ### CDK Commands
 
@@ -148,67 +159,94 @@ cdk deploy
 cdk destroy
 ```
 
-## Frameworks
-
-### Streamlit
-
-- Built-in health endpoint: `/_stcore/health`
-- Uses `StreamlitAuth` helper from `cognito-auth` library
-- Simple, Pythonic UI development
-
-### Dash
-
-- Custom health endpoint: `/health`
-- Uses `DashAuth` helper from `cognito-auth` library
-- Plotly-based dashboards with callback architecture
-
-### FastAPI
-
-- Custom health endpoint: `/health`
-- Uses `FastAPIAuth` middleware from `cognito-auth` library
-- High-performance async API framework
 
 ## Architecture
 
-The infrastructure uses custom CDK constructs from `gds-idea-cdk-constructs`:
-
-- **Application Load Balancer** with Cognito authentication
-- **ECS Fargate** for container orchestration
-- **Auto-scaling** based on CPU/memory
-- **CloudWatch** logging and monitoring
-
-Configuration is managed through `pyproject.toml`:
-
-```python
-# app.py
-app_config = AppConfig.from_pyproject()
-env_config = EnvConfig(cdk_env)
-
-stack = WebApp(
-    app,
-    env_config=env_config,
-    app_config=app_config,
-    authentication=AuthType.COGNITO,
-)
-```
+The infrastructure uses custom CDK constructs from [`gds-idea-cdk-constructs`. ](https://crispy-carnival-6l47716.pages.github.io/)
 
 ## Authentication
 
-The ALB injects Cognito authentication headers:
+Authentication is handled centrally by the core infrastrcture. 
+You turn it on in the webApp by running with `AuthType.COGNITO`. 
 
-- `x-amzn-oidc-data`: JWT with user claims (email, username, etc.)
-- `x-amzn-oidc-accesstoken`: Cognito access token with groups
+## Authorisation
 
-Applications use the `cognito-auth` library to extract and validate these headers.
+Authorisation, who can access the app, is performed in app. 
+Applications use the [`cognito-auth`](https://co-cddo.github.io/gds-idea-app-auth/) 
+library which has examples for each of the frameworks. 
+This template gives you a minimal app configured with `cognito-auth`. 
+
+When working locally you can mock the the authoriser and user for testing. 
+See the dev_mocks folder, which is automatically mounted in your
+local container. 
 
 ## Development Workflow
 
 1. **Configure**: `uv run configure my-app streamlit`
 2. **Develop**: Open in VS Code dev container or run `uv run smoke_test --wait`
-3. **Customize**: Edit `app_src/<framework>_app.py`
-4. **Test**: Smoke test validates build and health checks
+3. **Customize App**: Edit `app_src/<framework>_app.py`
+3. **Customize CDK**: Edit `app.py`
+4. **Test**: run `uv run smoke_test` - validates build and health checks
 5. **Deploy**: `cdk deploy` to AWS
 6. **Iterate**: Switch frameworks anytime with `uv run configure`
+
+## AWS Authentication for Dev Container (Optional)
+
+If your application needs AWS access during development (e.g., to access S3, DynamoDB, etc.), you can provide AWS credentials to the dev container.
+
+### Understanding the Two-Role Model
+
+There are **two different AWS roles** in this project:
+
+1. **Deployment Role** - Your personal AWS role used to run `cdk deploy` (you already have this)
+2. **Runtime Role** - The role your application needs when running in the container (what `provide_role` sets up)
+
+### Setup
+
+1. **Configure the runtime role** in `pyproject.toml`:
+
+```toml
+[tool.webapp.dev]
+aws_role_arn = "arn:aws:iam::123456789012:role/AppRuntimeRole" # get this from console or your CDK
+aws_region = "eu-west-2"  # Optional, defaults to eu-west-2
+```
+
+2. **Provide credentials to the container** (run on your HOST machine):
+
+```bash
+# Interactive - prompts for MFA code
+uv run provide_role
+
+# Non-interactive
+uv run provide_role --mfa-code 123456
+
+# Custom duration (1 hour instead of default 12 hours)
+uv run provide_role --mfa-code 123456 --duration 3600
+```
+
+3. **Credentials are immediately available** in the dev container (no restart needed!)
+
+```bash
+# Inside dev container
+aws sts get-caller-identity
+# Your app now has AWS access
+```
+
+### How It Works
+
+- MFA device is auto-detected from your AWS configuration
+- Temporary credentials are written to `.aws-dev/` on your host (gitignored)
+- This directory is mounted into the container at `/home/vscode/.aws/`
+- AWS SDK/CLI automatically uses these credentials
+- Credentials expire after 12 hours by default
+- To refresh: just re-run `uv run provide_role` on your host
+
+### Notes
+
+- ⚠️ This is **optional** - only needed if your app requires AWS access during development
+- ✅ Credentials update **live** - no container restart needed
+- ✅ Completely separate from CDK deployment credentials
+- ✅ Standard AWS credentials format (`[default]` profile)
 
 ## Switching Frameworks
 
@@ -222,10 +260,3 @@ uv run configure
 
 This updates the configuration and copies new framework files to `app_src/`.
 
-## License
-
-[Your License Here]
-
-## Contributing
-
-[Your Contributing Guidelines Here]
