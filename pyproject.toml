@@ -24,7 +24,7 @@ dev = [
 [project.scripts]
 configure = "template.configure:main"
 smoke_test = "template.smoke_test:main"
-provide-role = "template.provide_role:main"
+provide_role = "template.provide_role:main"
 
 [tool.uv]
 package = true
@@ -43,7 +43,7 @@ framework = "streamlit"
 
 [tool.webapp.dev]
 # AWS role for dev container (optional - only needed if app requires AWS access during dev)
-# Provide credentials by running: uv run provide-role
+# Provide credentials by running: uv run provide_role
 # aws_role_arn = "arn:aws:iam::..."
 # aws_region = "eu-west-2"
 

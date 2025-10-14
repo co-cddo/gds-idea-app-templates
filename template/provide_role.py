@@ -11,8 +11,8 @@ Prerequisites:
     This script will use those credentials to assume the container role.
 
 Usage:
-    uv run provide-role                    # Use default duration (12 hours)
-    uv run provide-role --duration 3600    # Custom duration (1 hour)
+    uv run provide_role                    # Use default duration (12 hours)
+    uv run provide_role --duration 3600    # Custom duration (1 hour)
 """
 
 import argparse
@@ -139,7 +139,7 @@ def main():
             )
             print("   Example: ")
             print("   export AWS_PROFILE=assume-ds-role")
-            print("   uv run provide-role")
+            print("   uv run provide_role")
             print("")
             print()
             response = input("Continue anyway? (y/N): ").strip().lower()

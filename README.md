@@ -89,11 +89,11 @@ cdk deploy
 
 ```
 .
-├── app.py                      # CDK infrastructure definition
+├── app.py                      # CDK infrastructure definition - modify this
 ├── pyproject.toml              # Project config (includes [tool.webapp])
 ├── cdk.json                    # CDK configuration
 │
-├── template/                   # Template tooling (do not edit manually)
+├── template/                   # Template tooling (DO NOT edit manually)
 │   ├── configure.py            # Configuration script
 │   ├── smoke_test.py           # Docker smoke test
 │   └── frameworks/             # Framework templates
@@ -102,9 +102,9 @@ cdk deploy
 │       └── fastapi/
 │
 ├── app_src/                    # Active application (generated) add your app here.
-│   ├── Dockerfile
-│   ├── pyproject.toml
-│   └── <framework>_app.py
+│   ├── Dockerfile              # This will be configured for your framework
+│   ├── pyproject.toml          # Add app dependencies here, cd app_src then uv add
+│   └── <framework>_app.py.     # Modify the template
 │
 └── .devcontainer/              # VS Code dev container config
     └── docker-compose.yml
@@ -159,25 +159,6 @@ cdk deploy
 cdk destroy
 ```
 
-## Frameworks
-
-### Streamlit
-
-- Built-in health endpoint: `/_stcore/health`
-- Uses `StreamlitAuth` helper from `cognito-auth` library
-- Simple, Pythonic UI development
-
-### Dash
-
-- Custom health endpoint: `/health`
-- Uses `DashAuth` helper from `cognito-auth` library
-- Plotly-based dashboards with callback architecture
-
-### FastAPI
-
-- Custom health endpoint: `/health`
-- Uses `FastAPIAuth` middleware from `cognito-auth` library
-- High-performance async API framework
 
 ## Architecture
 
@@ -185,14 +166,14 @@ The infrastructure uses custom CDK constructs from [`gds-idea-cdk-constructs`. ]
 
 ## Authentication
 
-Authentication is handled by centrally by the core infrastrcture. 
+Authentication is handled centrally by the core infrastrcture. 
 You turn it on in the webApp by running with `AuthType.COGNITO`. 
 
 ## Authorisation
 
 Authorisation, who can access the app, is performed in app. 
-Applications use the `cognito-auth` library which has examples
-for each of the frameworks. 
+Applications use the [`cognito-auth`](https://co-cddo.github.io/gds-idea-app-auth/) 
+library which has examples for each of the frameworks. 
 This template gives you a minimal app configured with `cognito-auth`. 
 
 When working locally you can mock the the authoriser and user for testing. 
@@ -203,8 +184,9 @@ local container.
 
 1. **Configure**: `uv run configure my-app streamlit`
 2. **Develop**: Open in VS Code dev container or run `uv run smoke_test --wait`
-3. **Customize**: Edit `app_src/<framework>_app.py`
-4. **Test**: Smoke test validates build and health checks
+3. **Customize App**: Edit `app_src/<framework>_app.py`
+3. **Customize CDK**: Edit `app.py`
+4. **Test**: run `uv run smoke_test` - validates build and health checks
 5. **Deploy**: `cdk deploy` to AWS
 6. **Iterate**: Switch frameworks anytime with `uv run configure`
 
@@ -217,7 +199,7 @@ If your application needs AWS access during development (e.g., to access S3, Dyn
 There are **two different AWS roles** in this project:
 
 1. **Deployment Role** - Your personal AWS role used to run `cdk deploy` (you already have this)
-2. **Runtime Role** - The role your application needs when running in the container (what `provide-role` sets up)
+2. **Runtime Role** - The role your application needs when running in the container (what `provide_role` sets up)
 
 ### Setup
 
@@ -225,7 +207,7 @@ There are **two different AWS roles** in this project:
 
 ```toml
 [tool.webapp.dev]
-aws_role_arn = "arn:aws:iam::123456789012:role/AppRuntimeRole"
+aws_role_arn = "arn:aws:iam::123456789012:role/AppRuntimeRole" # get this from console or your CDK
 aws_region = "eu-west-2"  # Optional, defaults to eu-west-2
 ```
 
@@ -233,13 +215,13 @@ aws_region = "eu-west-2"  # Optional, defaults to eu-west-2
 
 ```bash
 # Interactive - prompts for MFA code
-uv run provide-role
+uv run provide_role
 
 # Non-interactive
-uv run provide-role --mfa-code 123456
+uv run provide_role --mfa-code 123456
 
 # Custom duration (1 hour instead of default 12 hours)
-uv run provide-role --mfa-code 123456 --duration 3600
+uv run provide_role --mfa-code 123456 --duration 3600
 ```
 
 3. **Credentials are immediately available** in the dev container (no restart needed!)
@@ -257,7 +239,7 @@ aws sts get-caller-identity
 - This directory is mounted into the container at `/home/vscode/.aws/`
 - AWS SDK/CLI automatically uses these credentials
 - Credentials expire after 12 hours by default
-- To refresh: just re-run `uv run provide-role` on your host
+- To refresh: just re-run `uv run provide_role` on your host
 
 ### Notes
 
