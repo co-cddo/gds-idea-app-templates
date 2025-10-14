@@ -11,8 +11,7 @@ requires-python = ">=3.11"
 dependencies = [
     "aws-cdk-lib>=2.180.0",
     "constructs>=10.0.0,<11.0.0",
-    # "gds-idea-cdk-constructs @ git+https://github.com/co-cddo/gds-idea-cdk-constructs@v.0.1.2",
-    "gds-idea-cdk-constructs @ git+https://github.com/co-cddo/gds-idea-cdk-constructs@add-dev-assume-policy",
+    "gds-idea-cdk-constructs @ git+https://github.com/co-cddo/gds-idea-cdk-constructs@v0.1.2",
     "pydantic-settings>=2.0.0",
     "tomlkit>=0.12.0",
 ]
@@ -45,6 +44,6 @@ framework = "streamlit"
 [tool.webapp.dev]
 # AWS role for dev container (optional - only needed if app requires AWS access during dev)
 # Provide credentials by running: uv run provide-role
-aws_role_arn = "arn:aws:iam::992382722318:role/streamlit-test-stack-TaskRole30FC0FBB-TALBW8K24LX9"
-aws_region = "eu-west-2"
+# aws_role_arn = "arn:aws:iam::..."
+# aws_region = "eu-west-2"
 

@@ -182,11 +182,11 @@ Configuration is managed through `pyproject.toml`:
 ```python
 # app.py
 app_config = AppConfig.from_pyproject()
-env_config = EnvConfig(cdk_env)
+deployment_config = DeploymentConfig(cdk_env)
 
 stack = WebApp(
     app,
-    env_config=env_config,
+    deployment_config=deployment_config,
     app_config=app_config,
     authentication=AuthType.COGNITO,
 )

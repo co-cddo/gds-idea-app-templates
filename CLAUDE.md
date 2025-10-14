@@ -154,16 +154,16 @@ The main CDK app (`app.py`) defines the infrastructure using the `WebApp` constr
 - **WebApp Construct**: Creates an ECS Fargate service behind an ALB with Cognito authentication
 - **Authentication**: Uses `AuthType.COGNITO` for AWS Cognito User Pool integration
 - **Health Check**: Auto-detected based on framework (streamlit: `/_stcore/health`, dash/fastapi: `/health`)
-- **Environment**: Configured via `EnvConfig` which reads from CDK environment variables
+- **Environment**: Configured via `DeploymentConfig` which reads from CDK environment variables
 
 The simplified infrastructure:
 ```python
 app_config = AppConfig.from_pyproject()
-env_config = EnvConfig(cdk_env)
+deployment_config = DeploymentConfig(cdk_env)
 
 stack = WebApp(
     app,
-    env_config=env_config,
+    deployment_config=deployment_config,
     app_config=app_config,
     authentication=AuthType.COGNITO,
 )
