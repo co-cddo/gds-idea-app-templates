@@ -1,13 +1,12 @@
 # Web App Template with AWS Cognito Authentication
 
-A template repository for deploying Streamlit, Dash, or FastAPI applications to AWS ECS with Cognito authentication behind an Application Load Balancer.
+A template repository for deploying Streamlit, Dash, or FastAPI applications easily 
+within the gds-idea infrastructure.
 
 ## Features
 
 - 🚀 **Multi-framework support**: Choose between Streamlit, Dash, or FastAPI
-- 🔐 **Built-in authentication**: AWS Cognito integration with ALB
-- 🐳 **Docker-based deployment**: ECS Fargate with auto-scaling
-- 📦 **Infrastructure as Code**: AWS CDK for reproducible deployments
+- 🔐 **Built-in authentication**: GDS-IDEA team cognito
 - 🛠️ **Dev container ready**: VS Code dev containers for instant development environment
 - ✅ **Smoke testing**: Validate builds and health checks before deployment
 
@@ -17,15 +16,20 @@ A template repository for deploying Streamlit, Dash, or FastAPI applications to 
 
 - [UV](https://docs.astral.sh/uv/) - Modern Python package manager
 - [AWS CLI](https://aws.amazon.com/cli/) configured with credentials
-- [Docker](https://www.docker.com/) (optional, for local testing)
-- [VS Code](https://code.visualstudio.com/) with Dev Containers extension (recommended)
+- [AWS CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting-started.html)
+- [Docker runtime](https://www.docker.com/) (optional, for local testing, colima recommended)
+- [VS Code](https://code.visualstudio.com/) with Dev Containers extension 
+
+If you need to install any of the above it is recommended to use [brew](https://brew.sh/)
 
 ### 1. Clone and Install
 
 ```bash
 git clone <this-repo>
 cd <repo-name>
-uv sync
+uv sync[streamlit] # or 
+# uv sync[fastapi] # or
+# uv sync[dash]
 ```
 
 ### 2. Configure Your App
@@ -74,9 +78,8 @@ uv run smoke_test --wait
 ### 4. Deploy to AWS
 
 ```bash
-# Set AWS environment
-export CDK_DEFAULT_ACCOUNT=123456789012
-export CDK_DEFAULT_REGION=eu-west-2
+# Set AWS environment - you should have this configured already.
+export AWS_PROFILE=you-dev-profile
 
 # Deploy
 cdk deploy
@@ -90,7 +93,7 @@ cdk deploy
 ├── pyproject.toml              # Project config (includes [tool.webapp])
 ├── cdk.json                    # CDK configuration
 │
-├── template/                   # Template tooling
+├── template/                   # Template tooling (do not edit manually)
 │   ├── configure.py            # Configuration script
 │   ├── smoke_test.py           # Docker smoke test
 │   └── frameworks/             # Framework templates
@@ -98,7 +101,7 @@ cdk deploy
 │       ├── dash/
 │       └── fastapi/
 │
-├── app_src/                    # Active application (generated)
+├── app_src/                    # Active application (generated) add your app here.
 │   ├── Dockerfile
 │   ├── pyproject.toml
 │   └── <framework>_app.py
@@ -121,6 +124,10 @@ uv run configure
 
 ### Testing
 
+A utility to check the docker build as expected is included. It will build the container, 
+start it up, ping the health check address and clean up. If this runs you can be 
+confident when you deploy that it will work.
+
 ```bash
 # Smoke test (quick validation)
 uv run smoke_test
@@ -128,6 +135,10 @@ uv run smoke_test
 # Smoke test with interactive wait
 uv run smoke_test --wait
 ```
+
+Running with the `--wait` command delays shutting down and cleaning up the container 
+until you hit a key. This allows you to access the app locally. 
+
 
 ### CDK Commands
 
@@ -170,36 +181,23 @@ cdk destroy
 
 ## Architecture
 
-The infrastructure uses custom CDK constructs from `gds-idea-cdk-constructs`:
-
-- **Application Load Balancer** with Cognito authentication
-- **ECS Fargate** for container orchestration
-- **Auto-scaling** based on CPU/memory
-- **CloudWatch** logging and monitoring
-
-Configuration is managed through `pyproject.toml`:
-
-```python
-# app.py
-app_config = AppConfig.from_pyproject()
-deployment_config = DeploymentConfig(cdk_env)
-
-stack = WebApp(
-    app,
-    deployment_config=deployment_config,
-    app_config=app_config,
-    authentication=AuthType.COGNITO,
-)
-```
+The infrastructure uses custom CDK constructs from [`gds-idea-cdk-constructs`. ](https://crispy-carnival-6l47716.pages.github.io/)
 
 ## Authentication
 
-The ALB injects Cognito authentication headers:
+Authentication is handled by centrally by the core infrastrcture. 
+You turn it on in the webApp by running with `AuthType.COGNITO`. 
 
-- `x-amzn-oidc-data`: JWT with user claims (email, username, etc.)
-- `x-amzn-oidc-accesstoken`: Cognito access token with groups
+## Authorisation
 
-Applications use the `cognito-auth` library to extract and validate these headers.
+Authorisation, who can access the app, is performed in app. 
+Applications use the `cognito-auth` library which has examples
+for each of the frameworks. 
+This template gives you a minimal app configured with `cognito-auth`. 
+
+When working locally you can mock the the authoriser and user for testing. 
+See the dev_mocks folder, which is automatically mounted in your
+local container. 
 
 ## Development Workflow
 
@@ -280,10 +278,3 @@ uv run configure
 
 This updates the configuration and copies new framework files to `app_src/`.
 
-## License
-
-[Your License Here]
-
-## Contributing
-
-[Your Contributing Guidelines Here]
