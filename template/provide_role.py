@@ -28,7 +28,8 @@ AWS_DEV_DIR = REPO_ROOT / ".aws-dev"
 CREDENTIALS_FILE = AWS_DEV_DIR / "credentials"
 CONFIG_FILE = AWS_DEV_DIR / "config"
 
-DEFAULT_DURATION = 8 * 60 * 60  # 8 hours (max for IAM roles)
+# Because of role chaining it likely that 1 hour will be the max
+DEFAULT_DURATION = 1 * 60 * 60  # 1 hours (max for IAM roles)
 
 
 def get_current_identity() -> dict:
@@ -99,7 +100,7 @@ def main():
         "--duration",
         type=int,
         default=DEFAULT_DURATION,
-        help=f"Session duration in seconds (default: {DEFAULT_DURATION} = 8 hours)",
+        help="Session duration in seconds (default: 1 hours)",
     )
     args = parser.parse_args()
 
