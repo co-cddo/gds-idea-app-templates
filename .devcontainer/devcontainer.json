@@ -1,5 +1,5 @@
 {
-  "name": "Streamlit App Dev Container",
+  "name": "Web App Dev Container",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/app",
@@ -53,8 +53,8 @@
       "onAutoForward": "notify"
     }
   },
-  // Post-create command: sync dependencies
-  "postCreateCommand": "uv sync",
+  // Post-create command: sync dependencies and setup MOTD
+  "postCreateCommand": "uv sync && echo 'bash /app/.devcontainer/motd.sh' >> ~/.bashrc",
   // Run as non-root user
   "remoteUser": "vscode"
 }
