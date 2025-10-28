@@ -10,13 +10,19 @@ Usage:
     # Or edit pyproject.toml [tool.webapp] and sync files:
     uv run configure
 
-    # Force overwrite existing files:
+    # Force overwrite modified files:
     uv run configure <app-name> <framework> --force
     uv run configure --force
+
+How it works:
+  • New files are always copied
+  • Unchanged files (identical to template) are updated automatically
+  • Modified files (you changed them) are protected unless --force is used
 
 Frameworks: streamlit, dash, fastapi
 """
 
+import hashlib
 import re
 import shutil
 import sys
@@ -76,12 +82,34 @@ def validate_app_name(app_name: str) -> bool:
     return bool(re.match(r"^[a-zA-Z0-9_-]+$", app_name))
 
 
-def copy_framework_files(framework: str, force: bool = False) -> None:
-    """Copy framework files to app_src/.
+def files_identical(file1: Path, file2: Path) -> bool:
+    """Compare two files using SHA256 hash.
+
+    Args:
+        file1: First file path
+        file2: Second file path
+
+    Returns:
+        True if files have identical content, False otherwise
+    """
+    if not file1.exists() or not file2.exists():
+        return False
+
+    hash1 = hashlib.sha256(file1.read_bytes()).hexdigest()
+    hash2 = hashlib.sha256(file2.read_bytes()).hexdigest()
+
+    return hash1 == hash2
+
+
+def copy_framework_files(framework: str, force: bool = False) -> tuple[list, list, list]:
+    """Copy framework files to app_src/ with smart detection.
 
     Args:
         framework: The framework to copy files from
-        force: If True, overwrite existing files without prompting
+        force: If True, overwrite modified files without prompting
+
+    Returns:
+        Tuple of (copied, updated, protected) file lists
     """
     src = FRAMEWORKS_DIR / framework
     dst = APP_SRC_DIR
@@ -89,26 +117,84 @@ def copy_framework_files(framework: str, force: bool = False) -> None:
     if not src.exists():
         raise ValueError(f"Framework '{framework}' not found in template/frameworks/")
 
-    # Track file operations
-    copied = []
-    skipped = []
+    # Categorize files
+    new_files = []       # Files that don't exist in app_src/
+    unchanged_files = [] # Files identical to template (safe to update)
+    modified_files = []  # Files that differ from template (user changed)
 
-    # Copy all files from framework directory
     for file in src.iterdir():
         if file.is_file():
             dest_file = dst / file.name
 
-            # Check if file exists
-            if dest_file.exists() and not force:
-                skipped.append(file.name)
-                print(f"   ⊘ {file.name} (already exists, skipped)")
+            if not dest_file.exists():
+                new_files.append(file.name)
+            elif files_identical(file, dest_file):
+                unchanged_files.append(file.name)
             else:
+                modified_files.append(file.name)
+
+    # Show summary of what will happen
+    print()
+    if new_files:
+        print(f"📄 New files (will be created):")
+        for name in new_files:
+            print(f"   + {name}")
+        print()
+
+    if unchanged_files:
+        print(f"✓ Unchanged files (will be updated):")
+        for name in unchanged_files:
+            print(f"   ✓ {name}")
+        print()
+
+    if modified_files:
+        if force:
+            print(f"⚠️  Modified files (will be OVERWRITTEN due to --force):")
+        else:
+            print(f"⚠️  Modified files (will be PROTECTED):")
+        for name in modified_files:
+            print(f"   ⚠ {name}")
+        print()
+
+    # Check if we need to abort due to protected files
+    if modified_files and not force:
+        print("❌ Cannot proceed: some files have been modified.")
+        print("   Your changes will be preserved to prevent data loss.")
+        print()
+        print("Options:")
+        print("  • Use --force to overwrite ALL files (your changes will be lost)")
+        print("  • Manually back up your changes and run again")
+        print("  • Edit only the new/unchanged files above")
+        return [], [], modified_files
+
+    # Perform the copy operations
+    copied = []
+    updated = []
+    protected = []
+
+    for file in src.iterdir():
+        if file.is_file():
+            dest_file = dst / file.name
+
+            if file.name in new_files:
+                # New file - always copy
                 shutil.copy2(file, dest_file)
                 copied.append(file.name)
-                action = "overwritten" if dest_file.exists() else "copied"
-                print(f"   ✓ {file.name}")
+            elif file.name in unchanged_files:
+                # Unchanged file - safe to update
+                shutil.copy2(file, dest_file)
+                updated.append(file.name)
+            elif file.name in modified_files:
+                # Modified file
+                if force:
+                    # Force mode - overwrite
+                    shutil.copy2(file, dest_file)
+                    copied.append(file.name)
+                else:
+                    # Protect user changes
+                    protected.append(file.name)
 
-    return copied, skipped
+    return copied, updated, protected
 
 
 def main():
@@ -162,20 +248,32 @@ def main():
         print()
 
     # Copy framework files (both modes)
-    print(f"📦 Copying {framework} files to app_src/...")
+    print(f"📦 Analyzing {framework} files in app_src/...")
     try:
-        copied, skipped = copy_framework_files(framework, force=force)
+        copied, updated, protected = copy_framework_files(framework, force=force)
     except Exception as e:
         print(f"❌ Error copying files: {e}")
         sys.exit(1)
 
+    # Check if operation was blocked
+    if protected and not copied and not updated:
+        print("💡 To overwrite your modified files, use:")
+        print(f"   uv run configure {'--force' if mode == 'sync' else f'{app_name} {framework} --force'}")
+        sys.exit(1)
+
     # Summary message
-    if copied and skipped:
-        print(f"✅ Copied {len(copied)} file(s), skipped {len(skipped)} existing file(s)")
-    elif copied:
-        print(f"✅ Copied {len(copied)} {framework} file(s) to app_src/")
-    elif skipped:
-        print(f"⚠️  All files already exist. Use --force to overwrite.")
+    print()
+    total = len(copied) + len(updated)
+    if total > 0:
+        operations = []
+        if copied:
+            operations.append(f"{len(copied)} new")
+        if updated:
+            operations.append(f"{len(updated)} updated")
+        print(f"✅ Success: {', '.join(operations)} file(s)")
+
+    if protected:
+        print(f"ℹ️  Protected: {len(protected)} modified file(s) kept (use --force to overwrite)")
 
     print()
     print("🎉 Setup complete!")
@@ -195,11 +293,6 @@ def main():
         )
     else:
         print("💡 Run 'uv run configure <app-name> <framework>' to switch frameworks!")
-
-    if skipped and not force:
-        print()
-        print("💡 Tip: Use --force flag to overwrite existing files:"
-              f"\n   uv run configure {app_name if mode == 'set' else ''} {framework if mode == 'set' else ''} --force".strip())
 
 
 if __name__ == "__main__":
