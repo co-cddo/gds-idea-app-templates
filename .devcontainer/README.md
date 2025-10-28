@@ -8,7 +8,7 @@ This directory contains the configuration for VS Code dev containers, providing 
 2. Open this repository in VS Code
 3. Click "Reopen in Container" when prompted (or use Command Palette: `Dev Containers: Reopen in Container`)
 4. Wait for the container to build (first time only)
-5. Open a terminal - you'll see framework-specific instructions to start your app
+5. Start your app (see "Starting Your App" section below)
 
 ## Configuration Files
 
@@ -50,7 +50,7 @@ This file does NOT contain runtime config (env vars, ports) - those are in docke
 - **Base**: Uses the production `app_src/Dockerfile` (identical to deployed version)
 - **Working directory**: `/app` (mapped to `app_src/`)
 - **Port**: App runs on port 80 inside container, accessible at http://localhost:8501
-- **Startup**: Open a terminal to see framework-specific instructions for starting your app
+- **Startup**: See "Starting Your App" section above for framework-specific commands
 
 ### Volume Mounts
 - `app_src/` → `/app` (your code, live editing enabled)
@@ -63,6 +63,30 @@ When `COGNITO_AUTH_DEV_MODE=true`, the app uses mock files from `dev_mocks/` ins
 - `dev_mock_user.json` - Mock user session data
 
 Copy the `.example.json` files to create your own mock configurations.
+
+## Starting Your App
+
+Once the dev container is running, open a terminal and use the appropriate command for your framework:
+
+### Streamlit
+```bash
+uv run streamlit run streamlit_app.py --server.port 80
+```
+Then open http://localhost:8501
+
+### Dash
+```bash
+uv run python dash_app.py
+```
+Then open http://localhost:8501
+
+### FastAPI
+```bash
+uv run uvicorn fastapi_app:app --reload --host 0.0.0.0 --port 80
+```
+Then open http://localhost:8501
+
+Your code is in `/app/<framework>_app.py` and changes auto-reload on save.
 
 ## Common Tasks
 
@@ -80,8 +104,6 @@ If you update dependencies or the Dockerfile:
 2. Run `uv sync` in the terminal (or rebuild container)
 
 ### Troubleshooting
-
-**Container won't start**: Check that Docker Desktop is running and you have SSH keys configured for GitHub access.
 
 **Port 8501 already in use**: Stop any other services using that port, or change the port in `docker-compose.yml` (e.g., `"8502:80"`).
 
