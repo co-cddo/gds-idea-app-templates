@@ -10,7 +10,7 @@ logging.getLogger("watchdog").setLevel(logging.WARNING)
 REDIRECT_URL = "https://gds-idea.click/401.html"
 
 app = Dash(__name__)
-auth = DashAuth(app)
+auth = DashAuth()
 auth.protect_app(app)  # protects the entire app.
 
 
@@ -48,5 +48,9 @@ def display_user_info(n):
     )
 
 
-# Expose server for gunicorn
+# Expose server for gunicorn (production)
 server = app.server
+
+if __name__ == "__main__":
+    # Development mode: run Flask dev server with auto-reload
+    app.run(debug=True, host="0.0.0.0", port=80)

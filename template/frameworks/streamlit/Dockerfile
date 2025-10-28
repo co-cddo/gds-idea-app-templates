@@ -36,5 +36,15 @@ EXPOSE 80
 HEALTHCHECK CMD curl --fail http://localhost:80/_stcore/health || exit 1
 
 # Run streamlit using uv (production mode)
-# Dev container will keep this running via docker-compose volumes
-CMD ["uv", "run", "streamlit", "run", "streamlit_app.py", "--server.port", "80"]
+# Production flags:
+#   --server.port=80: Listen on container port 80
+#   --server.address=0.0.0.0: Listen on all interfaces
+#   --server.headless=true: Don't try to open browser
+#   --server.enableCORS=false: Disable CORS (behind ALB)
+#   --browser.gatherUsageStats=false: Disable telemetry
+CMD ["uv", "run", "streamlit", "run", "streamlit_app.py", \
+     "--server.port", "80", \
+     "--server.address", "0.0.0.0", \
+     "--server.headless", "true", \
+     "--server.enableCORS", "false", \
+     "--browser.gatherUsageStats", "false"]

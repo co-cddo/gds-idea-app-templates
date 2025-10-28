@@ -8,7 +8,7 @@ This directory contains the configuration for VS Code dev containers, providing 
 2. Open this repository in VS Code
 3. Click "Reopen in Container" when prompted (or use Command Palette: `Dev Containers: Reopen in Container`)
 4. Wait for the container to build (first time only)
-5. Streamlit will start automatically on http://localhost:8501
+5. Open a terminal - you'll see framework-specific instructions to start your app
 
 ## Configuration Files
 
@@ -49,8 +49,8 @@ This file does NOT contain runtime config (env vars, ports) - those are in docke
 ### Container Setup
 - **Base**: Uses the production `app_src/Dockerfile` (identical to deployed version)
 - **Working directory**: `/app` (mapped to `app_src/`)
-- **Port**: Streamlit runs on port 80 inside container, accessible at http://localhost:8501
-- **Auto-start**: Streamlit starts automatically when container launches
+- **Port**: App runs on port 80 inside container, accessible at http://localhost:8501
+- **Startup**: Open a terminal to see framework-specific instructions for starting your app
 
 ### Volume Mounts
 - `app_src/` → `/app` (your code, live editing enabled)
@@ -85,7 +85,7 @@ If you update dependencies or the Dockerfile:
 
 **Port 8501 already in use**: Stop any other services using that port, or change the port in `docker-compose.yml` (e.g., `"8502:80"`).
 
-**Changes not reflected**: Streamlit should auto-reload on file changes. If not, refresh the browser or restart Streamlit: `uv run streamlit run streamlit_app.py`
+**Changes not reflected**: Most frameworks auto-reload on file changes. If not, refresh the browser or restart your app (see the startup instructions shown in your terminal)
 
 ## Architecture Notes
 
@@ -93,7 +93,7 @@ If you update dependencies or the Dockerfile:
 The dev container uses the same Dockerfile as production deployments to ensure environment parity. This prevents "works on my machine" issues.
 
 ### Why Port 8501?
-- Container runs Streamlit on port 80 (same as production behind ALB)
+- Container runs your app on port 80 (same as production behind ALB)
 - Port 8501 is mapped for local access (no sudo needed)
 - This mimics the production setup where ALB listens on port 443/80
 
@@ -101,4 +101,4 @@ The dev container uses the same Dockerfile as production deployments to ensure e
 
 - [VS Code Dev Containers documentation](https://code.visualstudio.com/docs/devcontainers/containers)
 - [UV documentation](https://docs.astral.sh/uv/)
-- [Streamlit documentation](https://docs.streamlit.io/)
+- Framework docs: [Streamlit](https://docs.streamlit.io/) | [Dash](https://dash.plotly.com/) | [FastAPI](https://fastapi.tiangolo.com/)

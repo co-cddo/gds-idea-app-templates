@@ -27,9 +27,7 @@ If you need to install any of the above it is recommended to use [brew](https://
 ```bash
 git clone <this-repo>
 cd <repo-name>
-uv sync[streamlit] # or 
-# uv sync[fastapi] # or
-# uv sync[dash]
+uv sync
 ```
 
 ### 2. Configure Your App

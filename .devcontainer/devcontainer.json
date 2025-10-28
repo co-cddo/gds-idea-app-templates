@@ -1,5 +1,5 @@
 {
-  "name": "Streamlit App Dev Container",
+  "name": "Web App Dev Container",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/app",
@@ -14,10 +14,9 @@
   // edit docker-compose.yml instead./
   // ========================================================================
   // Additional dev container features
-  "features": {
-    "ghcr.io/devcontainers/features/git:1": {},
-    "ghcr.io/devcontainers/features/github-cli:1": {}
-  },
+  // These are incompatible with our build method DO NOT add features.
+  // "features": {
+  // },
   // VS Code customizations (ADD YOUR EXTENSIONS HERE)
   "customizations": {
     "vscode": {
@@ -26,7 +25,8 @@
         "ms-python.vscode-pylance",
         "charliermarsh.ruff",
         "tamasfe.even-better-toml",
-        "redhat.vscode-yaml"
+        "redhat.vscode-yaml",
+        "ms-toolsai.jupyter"
       ],
       "settings": {
         "python.defaultInterpreterPath": "/app/.venv/bin/python",
@@ -49,12 +49,12 @@
   ],
   "portsAttributes": {
     "8501": {
-      "label": "Streamlit",
+      "label": "Application",
       "onAutoForward": "notify"
     }
   },
-  // Post-create command: sync dependencies
-  "postCreateCommand": "uv sync",
+  // Post-create command: sync dependencies and setup MOTD
+  "postCreateCommand": "uv sync && echo 'bash /app/.devcontainer/motd.sh' >> ~/.bashrc",
   // Run as non-root user
   "remoteUser": "vscode"
 }
