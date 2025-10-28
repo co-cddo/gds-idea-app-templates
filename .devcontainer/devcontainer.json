@@ -14,10 +14,9 @@
   // edit docker-compose.yml instead./
   // ========================================================================
   // Additional dev container features
-  "features": {
-    "ghcr.io/devcontainers/features/git:1": {},
-    "ghcr.io/devcontainers/features/github-cli:1": {}
-  },
+  // These are incompatible with our build method DO NOT add features.
+  // "features": {
+  // },
   // VS Code customizations (ADD YOUR EXTENSIONS HERE)
   "customizations": {
     "vscode": {
@@ -26,7 +25,8 @@
         "ms-python.vscode-pylance",
         "charliermarsh.ruff",
         "tamasfe.even-better-toml",
-        "redhat.vscode-yaml"
+        "redhat.vscode-yaml",
+        "ms-toolsai.jupyter"
       ],
       "settings": {
         "python.defaultInterpreterPath": "/app/.venv/bin/python",
@@ -49,7 +49,7 @@
   ],
   "portsAttributes": {
     "8501": {
-      "label": "Streamlit",
+      "label": "Application",
       "onAutoForward": "notify"
     }
   },
