@@ -10,6 +10,10 @@ Usage:
     # Or edit pyproject.toml [tool.webapp] and sync files:
     uv run configure
 
+    # Force overwrite existing files:
+    uv run configure <app-name> <framework> --force
+    uv run configure --force
+
 Frameworks: streamlit, dash, fastapi
 """
 
@@ -72,23 +76,47 @@ def validate_app_name(app_name: str) -> bool:
     return bool(re.match(r"^[a-zA-Z0-9_-]+$", app_name))
 
 
-def copy_framework_files(framework: str) -> None:
-    """Copy framework files to app_src/."""
+def copy_framework_files(framework: str, force: bool = False) -> None:
+    """Copy framework files to app_src/.
+
+    Args:
+        framework: The framework to copy files from
+        force: If True, overwrite existing files without prompting
+    """
     src = FRAMEWORKS_DIR / framework
     dst = APP_SRC_DIR
 
     if not src.exists():
         raise ValueError(f"Framework '{framework}' not found in template/frameworks/")
 
+    # Track file operations
+    copied = []
+    skipped = []
+
     # Copy all files from framework directory
     for file in src.iterdir():
         if file.is_file():
-            shutil.copy2(file, dst / file.name)
-            print(f"   ✓ {file.name}")
+            dest_file = dst / file.name
+
+            # Check if file exists
+            if dest_file.exists() and not force:
+                skipped.append(file.name)
+                print(f"   ⊘ {file.name} (already exists, skipped)")
+            else:
+                shutil.copy2(file, dest_file)
+                copied.append(file.name)
+                action = "overwritten" if dest_file.exists() else "copied"
+                print(f"   ✓ {file.name}")
+
+    return copied, skipped
 
 
 def main():
-    if len(sys.argv) == 1:
+    # Check for --force flag
+    force = "--force" in sys.argv
+    args = [arg for arg in sys.argv[1:] if arg != "--force"]
+
+    if len(args) == 0:
         # No args: sync mode - read config and update files
         print("📖 Reading config from pyproject.toml [tool.webapp]...")
         app_name, framework = load_config()
@@ -96,10 +124,10 @@ def main():
         print(f"   framework: {framework}")
         print()
         mode = "sync"
-    elif len(sys.argv) == 3:
+    elif len(args) == 2:
         # Two args: set config and sync
-        app_name = sys.argv[1]
-        framework = sys.argv[2]
+        app_name = args[0]
+        framework = args[1]
 
         # Validate inputs
         if not validate_app_name(app_name):
@@ -122,6 +150,10 @@ def main():
         print(__doc__)
         sys.exit(1)
 
+    if force:
+        print("⚠️  Force mode: existing files will be overwritten")
+        print()
+
     # Update config if in set mode
     if mode == "set":
         print("⚙️  Updating pyproject.toml [tool.webapp]...")
@@ -132,11 +164,18 @@ def main():
     # Copy framework files (both modes)
     print(f"📦 Copying {framework} files to app_src/...")
     try:
-        copy_framework_files(framework)
+        copied, skipped = copy_framework_files(framework, force=force)
     except Exception as e:
         print(f"❌ Error copying files: {e}")
         sys.exit(1)
-    print(f"✅ Copied {framework} files to app_src/")
+
+    # Summary message
+    if copied and skipped:
+        print(f"✅ Copied {len(copied)} file(s), skipped {len(skipped)} existing file(s)")
+    elif copied:
+        print(f"✅ Copied {len(copied)} {framework} file(s) to app_src/")
+    elif skipped:
+        print(f"⚠️  All files already exist. Use --force to overwrite.")
 
     print()
     print("🎉 Setup complete!")
@@ -156,6 +195,11 @@ def main():
         )
     else:
         print("💡 Run 'uv run configure <app-name> <framework>' to switch frameworks!")
+
+    if skipped and not force:
+        print()
+        print("💡 Tip: Use --force flag to overwrite existing files:"
+              f"\n   uv run configure {app_name if mode == 'set' else ''} {framework if mode == 'set' else ''} --force".strip())
 
 
 if __name__ == "__main__":
