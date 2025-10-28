@@ -10,7 +10,7 @@ logging.getLogger("watchdog").setLevel(logging.WARNING)
 REDIRECT_URL = "https://gds-idea.click/401.html"
 
 app = Dash(__name__)
-auth = DashAuth(app)
+auth = DashAuth()
 auth.protect_app(app)  # protects the entire app.
 
 
