@@ -8,7 +8,7 @@ This directory contains the configuration for VS Code dev containers, providing 
 2. Open this repository in VS Code
 3. Click "Reopen in Container" when prompted (or use Command Palette: `Dev Containers: Reopen in Container`)
 4. Wait for the container to build (first time only)
-5. Open a terminal - you'll see framework-specific instructions to start your app
+5. Start your app (see "Starting Your App" section below)
 
 ## Configuration Files
 
@@ -40,7 +40,6 @@ This file is used by both:
 Modify this file to:
 - Install additional VS Code extensions (`extensions` array)
 - Change VS Code editor settings (`settings` object)
-- Add dev container features like AWS CLI, Docker-in-Docker, etc.
 
 This file does NOT contain runtime config (env vars, ports) - those are in docker-compose.yml.
 
@@ -50,7 +49,7 @@ This file does NOT contain runtime config (env vars, ports) - those are in docke
 - **Base**: Uses the production `app_src/Dockerfile` (identical to deployed version)
 - **Working directory**: `/app` (mapped to `app_src/`)
 - **Port**: App runs on port 80 inside container, accessible at http://localhost:8501
-- **Startup**: Open a terminal to see framework-specific instructions for starting your app
+- **Startup**: See "Starting Your App" section above for framework-specific commands
 
 ### Volume Mounts
 - `app_src/` → `/app` (your code, live editing enabled)
@@ -58,11 +57,99 @@ This file does NOT contain runtime config (env vars, ports) - those are in docke
 - UV cache persisted across rebuilds
 
 ### Authentication in Dev Mode
-When `COGNITO_AUTH_DEV_MODE=true`, the app uses mock files from `dev_mocks/` instead of AWS Cognito:
+
+#### Option 1: Mock Authentication (Recommended for Local Dev)
+When `COGNITO_AUTH_DEV_MODE=true`, which is the default for local dev,  The app uses mock 
+files from `dev_mocks/` instead of AWS Cognito:
 - `dev_mock_authoriser.json` - Mock ALB/Cognito configuration
 - `dev_mock_user.json` - Mock user session data
 
-Copy the `.example.json` files to create your own mock configurations.
+You can modify either to test if the auth is working as you'd expect. 
+
+### AWS credentials
+If your app needs to access AWS services during development, you can provide AWS credentials to the dev container using the `provide_role` script.
+
+**Prerequisites:**
+1. Configure your AWS profile (see "AWS Profile Configuration" below)
+2. Authenticate with your AWS profile (GDS-users account)
+
+**Two Modes:**
+
+**Pass-through Mode** - Use your current dev/prod role credentials directly:
+```bash
+# From the host (NOT inside container)
+export AWS_PROFILE=aws-prototype  # or your dev/prod profile
+uv run provide_role
+```
+
+Use this when:
+- You haven't created the container/task role yet (early development)
+- You want to test with your dev/prod role permissions
+- You're developing locally and don't need production-like isolation
+
+**Role Assumption Mode** - Assume a specific container/task role:
+```bash
+# First, configure the role in pyproject.toml
+# [tool.webapp.dev]
+# aws_role_arn = "arn:aws:iam::ACCOUNT_ID:role/YourContainerRole"
+
+# Then provide credentials
+export AWS_PROFILE=aws-prototype
+uv run provide_role
+```
+
+Use this when:
+- Testing with production-like permissions (container role)
+- The container/task role exists in AWS
+- You want to verify your app works with the role it will use in production
+
+**Force Pass-through Mode** (skip role even if configured):
+```bash
+export AWS_PROFILE=aws-prototype
+uv run provide_role --use-profile
+```
+
+**AWS Profile Configuration:**
+
+Edit `~/.aws/config`:
+```ini
+[profile aws-prototype]
+role_arn = arn:aws:iam::ACCOUNT_ID:role/YourDevRole
+source_profile = gds-users
+mfa_serial = arn:aws:iam::ACCOUNT_ID:mfa/your-mfa-device
+duration_seconds = 28800  # 8 hours
+```
+
+**How it works:**
+- Credentials are written to `.aws-dev/` on the host
+- This directory is mounted into the dev container at `/home/vscode/.aws/`
+- Changes take effect immediately (no container restart needed)
+- Re-run `uv run provide_role` whenever your credentials expire
+- Do not referecnce profile_names in your app_src code. 
+
+## Starting Your App
+
+Once the dev container is running, open a terminal and use the appropriate command for your framework:
+
+### Streamlit
+```bash
+uv run streamlit run streamlit_app.py --server.port 80
+```
+Then open http://localhost:8501
+
+### Dash
+```bash
+uv run python dash_app.py
+```
+Then open http://localhost:8501
+
+### FastAPI
+```bash
+uv run uvicorn fastapi_app:app --reload --host 0.0.0.0 --port 80
+```
+Then open http://localhost:8501
+
+Your code is in `/app/<framework>_app.py` and changes auto-reload on save.
 
 ## Common Tasks
 
@@ -80,8 +167,6 @@ If you update dependencies or the Dockerfile:
 2. Run `uv sync` in the terminal (or rebuild container)
 
 ### Troubleshooting
-
-**Container won't start**: Check that Docker Desktop is running and you have SSH keys configured for GitHub access.
 
 **Port 8501 already in use**: Stop any other services using that port, or change the port in `docker-compose.yml` (e.g., `"8502:80"`).
 
