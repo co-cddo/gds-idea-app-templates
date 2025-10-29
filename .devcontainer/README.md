@@ -40,7 +40,6 @@ This file is used by both:
 Modify this file to:
 - Install additional VS Code extensions (`extensions` array)
 - Change VS Code editor settings (`settings` object)
-- Add dev container features like AWS CLI, Docker-in-Docker, etc.
 
 This file does NOT contain runtime config (env vars, ports) - those are in docker-compose.yml.
 
@@ -60,11 +59,12 @@ This file does NOT contain runtime config (env vars, ports) - those are in docke
 ### Authentication in Dev Mode
 
 #### Option 1: Mock Authentication (Recommended for Local Dev)
-When `COGNITO_AUTH_DEV_MODE=true`, the app uses mock files from `dev_mocks/` instead of AWS Cognito:
+When `COGNITO_AUTH_DEV_MODE=true`, which is the default for local dev,  The app uses mock 
+files from `dev_mocks/` instead of AWS Cognito:
 - `dev_mock_authoriser.json` - Mock ALB/Cognito configuration
 - `dev_mock_user.json` - Mock user session data
 
-Copy the `.example.json` files to create your own mock configurations.
+You can modify either to test if the auth is working as you'd expect. 
 
 ### AWS credentials
 If your app needs to access AWS services during development, you can provide AWS credentials to the dev container using the `provide_role` script.
@@ -109,9 +109,9 @@ export AWS_PROFILE=aws-prototype
 uv run provide_role --use-profile
 ```
 
-**AWS Profile Configuration (8-hour sessions):**
+**AWS Profile Configuration:**
 
-Edit `~/.aws/config` to request longer credential duration:
+Edit `~/.aws/config`:
 ```ini
 [profile aws-prototype]
 role_arn = arn:aws:iam::ACCOUNT_ID:role/YourDevRole
@@ -120,13 +120,12 @@ mfa_serial = arn:aws:iam::ACCOUNT_ID:mfa/your-mfa-device
 duration_seconds = 28800  # 8 hours
 ```
 
-**Important:** The IAM role must have "Maximum session duration" set to at least 8 hours in the AWS console.
-
 **How it works:**
 - Credentials are written to `.aws-dev/` on the host
 - This directory is mounted into the dev container at `/home/vscode/.aws/`
 - Changes take effect immediately (no container restart needed)
 - Re-run `uv run provide_role` whenever your credentials expire
+- Do not referecnce profile_names in your app_src code. 
 
 ## Starting Your App
 
