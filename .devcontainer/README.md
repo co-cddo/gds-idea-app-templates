@@ -58,11 +58,75 @@ This file does NOT contain runtime config (env vars, ports) - those are in docke
 - UV cache persisted across rebuilds
 
 ### Authentication in Dev Mode
+
+#### Option 1: Mock Authentication (Recommended for Local Dev)
 When `COGNITO_AUTH_DEV_MODE=true`, the app uses mock files from `dev_mocks/` instead of AWS Cognito:
 - `dev_mock_authoriser.json` - Mock ALB/Cognito configuration
 - `dev_mock_user.json` - Mock user session data
 
 Copy the `.example.json` files to create your own mock configurations.
+
+### AWS credentials
+If your app needs to access AWS services during development, you can provide AWS credentials to the dev container using the `provide_role` script.
+
+**Prerequisites:**
+1. Configure your AWS profile (see "AWS Profile Configuration" below)
+2. Authenticate with your AWS profile (GDS-users account)
+
+**Two Modes:**
+
+**Pass-through Mode** - Use your current dev/prod role credentials directly:
+```bash
+# From the host (NOT inside container)
+export AWS_PROFILE=aws-prototype  # or your dev/prod profile
+uv run provide_role
+```
+
+Use this when:
+- You haven't created the container/task role yet (early development)
+- You want to test with your dev/prod role permissions
+- You're developing locally and don't need production-like isolation
+
+**Role Assumption Mode** - Assume a specific container/task role:
+```bash
+# First, configure the role in pyproject.toml
+# [tool.webapp.dev]
+# aws_role_arn = "arn:aws:iam::ACCOUNT_ID:role/YourContainerRole"
+
+# Then provide credentials
+export AWS_PROFILE=aws-prototype
+uv run provide_role
+```
+
+Use this when:
+- Testing with production-like permissions (container role)
+- The container/task role exists in AWS
+- You want to verify your app works with the role it will use in production
+
+**Force Pass-through Mode** (skip role even if configured):
+```bash
+export AWS_PROFILE=aws-prototype
+uv run provide_role --use-profile
+```
+
+**AWS Profile Configuration (8-hour sessions):**
+
+Edit `~/.aws/config` to request longer credential duration:
+```ini
+[profile aws-prototype]
+role_arn = arn:aws:iam::ACCOUNT_ID:role/YourDevRole
+source_profile = gds-users
+mfa_serial = arn:aws:iam::ACCOUNT_ID:mfa/your-mfa-device
+duration_seconds = 28800  # 8 hours
+```
+
+**Important:** The IAM role must have "Maximum session duration" set to at least 8 hours in the AWS console.
+
+**How it works:**
+- Credentials are written to `.aws-dev/` on the host
+- This directory is mounted into the dev container at `/home/vscode/.aws/`
+- Changes take effect immediately (no container restart needed)
+- Re-run `uv run provide_role` whenever your credentials expire
 
 ## Starting Your App
 
