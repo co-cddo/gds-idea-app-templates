@@ -1,0 +1,318 @@
+#!/usr/bin/env python3
+"""
+Provide AWS credentials to dev container.
+
+This script runs on the HOST machine to provide AWS credentials to the dev container
+by writing temporary credentials to .aws-dev/, which is mounted into the container.
+
+Prerequisites:
+    AWS_PROFILE must be set to your dev or prod profile
+    (assumed from GDS-users account)
+
+Two modes:
+1. Role Assumption Mode (default when aws_role_arn is configured):
+   - Assumes the container role from your current profile credentials
+   - Use for production-like testing with container role permissions
+   - Default duration: 1 hour (due to role chaining limits)
+
+2. Pass-through Mode (when --use-profile flag OR no aws_role_arn):
+   - Extracts and writes your current profile credentials (dev/prod role)
+   - Use during development before container role exists
+   - Cannot extend expiration (credentials are already assumed role)
+
+Usage:
+    # Role assumption mode (assumes role from pyproject.toml)
+    AWS_PROFILE=aws-dev uv run provide_role
+
+    # Pass-through mode (force use current profile, skip role assumption)
+    AWS_PROFILE=aws-dev uv run provide_role --use-profile
+
+    # Pass-through mode (no role configured)
+    AWS_PROFILE=aws-prod uv run provide_role
+"""
+
+import argparse
+import os
+import sys
+import tomllib
+from pathlib import Path
+
+import boto3
+from botocore.exceptions import ClientError, NoCredentialsError
+
+REPO_ROOT = Path(__file__).parent.parent
+PYPROJECT_PATH = REPO_ROOT / "pyproject.toml"
+AWS_DEV_DIR = REPO_ROOT / ".aws-dev"
+CREDENTIALS_FILE = AWS_DEV_DIR / "credentials"
+CONFIG_FILE = AWS_DEV_DIR / "config"
+
+# Default duration for role assumption mode
+DEFAULT_ROLE_DURATION = 1 * 60 * 60  # 1 hour (role chaining limit)
+
+
+def get_current_identity(session: boto3.Session) -> dict:
+    """Get current AWS identity to verify credentials are active."""
+    try:
+        sts = session.client("sts")
+        return sts.get_caller_identity()
+    except NoCredentialsError as e:
+        raise RuntimeError(
+            "No AWS credentials found. Configure credentials first."
+        ) from e
+    except ClientError as e:
+        raise RuntimeError(f"Failed to get AWS identity: {e}") from e
+
+
+def assume_role(session: boto3.Session, role_arn: str, duration: int) -> dict:
+    """Assume the specified AWS role from current credentials."""
+    try:
+        sts = session.client("sts")
+        response = sts.assume_role(
+            RoleArn=role_arn,
+            RoleSessionName="dev-container",
+            DurationSeconds=duration,
+        )
+        return response
+    except ClientError as e:
+        error_code = e.response.get("Error", {}).get("Code", "Unknown")
+        error_msg = e.response.get("Error", {}).get("Message", str(e))
+        raise RuntimeError(f"Failed to assume role ({error_code}): {error_msg}") from e
+
+
+def get_current_session_credentials(session: boto3.Session) -> dict:
+    """Extract credentials from current boto3 session.
+
+    Returns credentials dict compatible with write_credentials format:
+    - AccessKeyId
+    - SecretAccessKey
+    - SessionToken
+    - Expiration (datetime object if available, None otherwise)
+    """
+    try:
+        credentials = session.get_credentials()
+        frozen_creds = credentials.get_frozen_credentials()
+
+        # Build credentials dict in same format as STS responses
+        creds_dict = {
+            "AccessKeyId": frozen_creds.access_key,
+            "SecretAccessKey": frozen_creds.secret_key,
+            "SessionToken": frozen_creds.token,
+        }
+
+        # Try to get expiration from credential provider
+        # For assumed role credentials, the provider stores expiration time
+        expiration = None
+        if hasattr(credentials, "_expiry_time"):
+            # Some credential providers store expiry_time
+            expiration = credentials._expiry_time
+        elif hasattr(credentials, "_metadata") and credentials._metadata:
+            # Check metadata for expiration
+            expiration = credentials._metadata.get("expiry_time")
+
+        creds_dict["Expiration"] = expiration
+
+        return creds_dict
+    except Exception as e:
+        raise RuntimeError(f"Failed to extract session credentials: {e}") from e
+
+
+def write_credentials(creds: dict, region: str, source_description: str) -> None:
+    """Write credentials to .aws-dev/ in standard AWS format.
+
+    Args:
+        creds: Credentials dictionary with AccessKeyId, SecretAccessKey, SessionToken, Expiration (optional)
+        region: AWS region for config file
+        source_description: Description of credential source (e.g., "Role: arn:..." or "Source: ...")
+    """
+    AWS_DEV_DIR.mkdir(exist_ok=True)
+
+    # Handle optional expiration
+    if creds.get("Expiration"):
+        expiration_line = f"# Expires: {creds['Expiration']}"
+    else:
+        expiration_line = "# Expires: Unknown (inherited from session)"
+
+    # Write credentials file
+    credentials_content = f"""# Auto-generated by provide_role
+# {source_description}
+{expiration_line}
+[default]
+aws_access_key_id = {creds["AccessKeyId"]}
+aws_secret_access_key = {creds["SecretAccessKey"]}
+aws_session_token = {creds["SessionToken"]}
+"""
+    CREDENTIALS_FILE.write_text(credentials_content)
+
+    # Write config file
+    config_content = f"""[default]
+region = {region}
+output = json
+"""
+    CONFIG_FILE.write_text(config_content)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Provide AWS credentials to dev container"
+    )
+    parser.add_argument(
+        "--duration",
+        type=int,
+        default=DEFAULT_ROLE_DURATION,
+        help=f"Session duration in seconds for role assumption (default: {DEFAULT_ROLE_DURATION}s = 1 hour)",
+    )
+    parser.add_argument(
+        "--use-profile",
+        action="store_true",
+        help="Use current AWS profile credentials directly (skip role assumption even if aws_role_arn is configured)",
+    )
+    args = parser.parse_args()
+
+    # Check AWS_PROFILE is set
+    profile_name = os.environ.get("AWS_PROFILE")
+    if not profile_name:
+        print("❌ AWS_PROFILE environment variable is not set. Run:", file=sys.stderr)
+        print(
+            "   export AWS_PROFILE=your-profile-name\n   uv run provide_role",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    # Create a single boto3 session to reuse (avoids multiple MFA prompts)
+    session = boto3.Session()
+
+    # Read config
+    try:
+        with open(PYPROJECT_PATH, "rb") as f:
+            config = tomllib.load(f)
+    except FileNotFoundError:
+        print(f"❌ Error: {PYPROJECT_PATH} not found", file=sys.stderr)
+        sys.exit(1)
+
+    dev_config = config.get("tool", {}).get("webapp", {}).get("dev", {})
+    role_arn = dev_config.get("aws_role_arn", "")
+    region = dev_config.get("aws_region", "eu-west-2")
+
+    # Check current AWS identity
+    print("🔍 Checking current AWS credentials...")
+    try:
+        identity = get_current_identity(session)
+        current_arn = identity.get("Arn", "")
+        print(f"   AWS_PROFILE: {profile_name}")
+        print(f"   Current identity: {current_arn}")
+    except RuntimeError as e:
+        print(f"❌ {e}", file=sys.stderr)
+        sys.exit(1)
+
+    # Determine mode
+    use_profile_flag = args.use_profile
+    role_arn_configured = bool(role_arn)
+
+    if use_profile_flag:
+        use_pass_through = True
+        mode_reason = "--use-profile flag"
+    elif role_arn_configured:
+        use_pass_through = False
+        mode_reason = "aws_role_arn configured in pyproject.toml"
+    else:
+        use_pass_through = True
+        mode_reason = "no aws_role_arn configured in pyproject.toml"
+
+    # Display mode
+    print()
+    print("=" * 70)
+    if use_pass_through:
+        print("MODE: Pass-through")
+        print(f"   → Reason: {mode_reason}")
+        print(f"   → Using credentials from profile: {profile_name}")
+        print(f"   → Identity: {current_arn}")
+    else:
+        print("MODE: Role Assumption")
+        print(f"   → Reason: {mode_reason}")
+        print(f"   → Will assume: {role_arn}")
+        print(f"   → From profile: {profile_name}")
+    print("=" * 70)
+
+    if not use_pass_through:
+        # Role Assumption Mode
+        print()
+        print(
+            f"⏱️  Duration: {args.duration} seconds ({args.duration / 3600:.1f} hours)"
+        )
+        print()
+
+        # Assume role
+        print("🔐 Assuming role...")
+        try:
+            response = assume_role(session, role_arn, args.duration)
+            creds = response["Credentials"]
+            assumed_role_id = response.get("AssumedRoleUser", {}).get("Arn", "")
+            source_description = f"Role: {role_arn}"
+            print("✓ Successfully assumed role")
+            if assumed_role_id:
+                print(f"   New identity: {assumed_role_id}")
+        except RuntimeError as e:
+            print(f"❌ {e}", file=sys.stderr)
+            print()
+            print(
+                "💡 Tip: Make sure your current profile has permission to assume the container role"
+            )
+            sys.exit(1)
+
+    else:
+        # Pass-through Mode
+        print()
+        print("🔑 Extracting current session credentials...")
+        try:
+            creds = get_current_session_credentials(session)
+            source_description = f"Source: AWS_PROFILE={profile_name} (pass-through)"
+            print("✓ Credentials extracted")
+            print(f"   Identity: {current_arn}")
+
+            if creds.get("Expiration"):
+                print(f"   Expires: {creds['Expiration']}")
+                print(
+                    "   (Using session expiration from your profile's duration_seconds)"
+                )
+            else:
+                print("   Expiration: Unknown")
+                print(
+                    "   💡 Tip: Set duration_seconds in your AWS profile config for longer sessions"
+                )
+        except RuntimeError as e:
+            print(f"❌ {e}", file=sys.stderr)
+            sys.exit(1)
+
+    # Write credentials (same for both modes)
+    write_credentials(creds, region, source_description)
+
+    print()
+    print(f"✅ Credentials written to {AWS_DEV_DIR}/")
+    if creds.get("Expiration"):
+        print(f"   Expires: {creds['Expiration']}")
+    else:
+        print("   Expiration: Not available")
+    print()
+    print("📦 Credentials are now available in your dev container")
+    print("   (No restart needed - credentials update live)")
+
+    # Provide hints based on mode
+    if use_pass_through and role_arn_configured:
+        print()
+        print("💡 To use role assumption mode instead, run without --use-profile flag:")
+        print(f"   AWS_PROFILE={profile_name} uv run provide_role")
+    elif use_pass_through and not role_arn_configured:
+        print()
+        print("💡 To use role assumption mode instead:")
+        print("   Add to pyproject.toml [tool.webapp.dev]:")
+        print('   aws_role_arn = "arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME"')
+    elif not use_pass_through:
+        print()
+        print("💡 To use pass-through mode instead (skip role assumption):")
+        print(f"   AWS_PROFILE={profile_name} uv run provide_role --use-profile")
+
+    print()
+
+
+if __name__ == "__main__":
+    main()
