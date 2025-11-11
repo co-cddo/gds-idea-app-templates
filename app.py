@@ -5,7 +5,7 @@ import aws_cdk as cdk
 from aws_cdk import (
     Tags,
 )
-from gds_idea_cdk_constructs import AppConfig, DeploymentEnvironment
+from gds_idea_cdk_constructs import AppConfig, DeploymentConfig
 from gds_idea_cdk_constructs.web_app import AuthType, WebApp
 
 app = cdk.App()
@@ -16,7 +16,7 @@ cdk_env = cdk.Environment(
 )
 
 app_config = AppConfig.from_pyproject()
-dep_config = DeploymentEnvironment(cdk_env)
+dep_config = DeploymentConfig(cdk_env)
 
 #
 Tags.of(app).add("Environment", dep_config.environment.friendly_name)

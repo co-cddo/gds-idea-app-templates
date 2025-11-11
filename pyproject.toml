@@ -12,7 +12,7 @@ dependencies = [
     "aws-cdk-lib>=2.180.0",
     "boto3>=1.26.0",
     "constructs>=10.0.0,<11.0.0",
-    "gds-idea-cdk-constructs @ git+https://github.com/co-cddo/gds-idea-cdk-constructs@v0.1.2",
+    "gds-idea-cdk-constructs @ git+https://github.com/co-cddo/gds-idea-cdk-constructs@v0.1.4",
     "pydantic-settings>=2.0.0",
     "tomlkit>=0.12.0",
 ]
@@ -39,7 +39,7 @@ module-root = ""
 
 [tool.webapp]
 # Web application configuration
-app_name = "streamlit-test"
+app_name = "stream-t"
 framework = "streamlit"
 
 [tool.webapp.dev]
