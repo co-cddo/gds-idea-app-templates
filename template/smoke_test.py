@@ -23,7 +23,7 @@ DOCKERFILE_PATH = REPO_ROOT / "app_src" / "Dockerfile"
 # Configuration
 COMPOSE_FILE = ".devcontainer/docker-compose.yml"
 SERVICE_NAME = "app"
-CONTAINER_PORT = 80
+CONTAINER_PORT = 8080
 MAX_WAIT_SECONDS = 300
 CHECK_INTERVAL_SECONDS = 2
 
