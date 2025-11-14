@@ -30,11 +30,11 @@ RUN uv sync
 COPY app_src/ .
 
 # Expose port
-EXPOSE 80
+EXPOSE 8080
 
 # Health check (Dash custom endpoint)
-HEALTHCHECK CMD curl --fail http://localhost:80/health || exit 1
+HEALTHCHECK CMD curl --fail http://localhost:8080/health || exit 1
 
 # Run Dash via gunicorn (production mode)
 # Dev container will keep this running via docker-compose volumes
-CMD ["uv", "run", "gunicorn", "dash_app:server", "-b", "0.0.0.0:80", "--workers", "1"]
+CMD ["uv", "run", "gunicorn", "dash_app:server", "-b", "0.0.0.0:8080", "--workers", "1"]

@@ -30,11 +30,11 @@ RUN uv sync
 COPY app_src/ .
 
 # Expose port
-EXPOSE 80
+EXPOSE 8080
 
 # Health check (FastAPI custom endpoint)
-HEALTHCHECK CMD curl --fail http://localhost:80/health || exit 1
+HEALTHCHECK CMD curl --fail http://localhost:8080/health || exit 1
 
 # Run FastAPI via uvicorn (production mode)
 # Dev container will keep this running via docker-compose volumes
-CMD ["uv", "run", "uvicorn", "fastapi_app:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uv", "run", "uvicorn", "fastapi_app:app", "--host", "0.0.0.0", "--port", "8080"]

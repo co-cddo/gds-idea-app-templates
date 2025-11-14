@@ -30,10 +30,10 @@ RUN uv sync
 COPY app_src/ .
 
 # Expose port
-EXPOSE 80
+EXPOSE 8080
 
 # Health check
-HEALTHCHECK CMD curl --fail http://localhost:80/_stcore/health || exit 1
+HEALTHCHECK CMD curl --fail http://localhost:8080/_stcore/health || exit 1
 
 # Run streamlit using uv (production mode)
 # Production flags:
@@ -43,7 +43,7 @@ HEALTHCHECK CMD curl --fail http://localhost:80/_stcore/health || exit 1
 #   --server.enableCORS=false: Disable CORS (behind ALB)
 #   --browser.gatherUsageStats=false: Disable telemetry
 CMD ["uv", "run", "streamlit", "run", "streamlit_app.py", \
-     "--server.port", "80", \
+     "--server.port", "8080", \
      "--server.address", "0.0.0.0", \
      "--server.headless", "true", \
      "--server.enableCORS", "false", \
