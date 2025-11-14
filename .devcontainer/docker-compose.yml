@@ -38,7 +38,7 @@ services:
       - COGNITO_AUTH_DEV_CONFIG=/app/dev_mocks/dev_mock_user.json
 
     ports:
-      - "8501:80" # Map host port 8501 to container port 80
+      - "8080:8080" # Map host port 8080 to container port 8080
 
 volumes:
   uv-cache:

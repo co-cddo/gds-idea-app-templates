@@ -45,7 +45,7 @@
   },
   // Forward Streamlit port
   "forwardPorts": [
-    8501
+    8080
   ],
   "portsAttributes": {
     "8501": {
