@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Streamlit app with Cognito authentication"
 requires-python = ">=3.12"
 dependencies = [
-    "cognito-auth[streamlit] @ git+https://github.com/co-cddo/gds-idea-app-auth.git@v0.1.2",
+    "cognito-auth[streamlit] @ git+https://github.com/co-cddo/gds-idea-app-auth.git@v0.1.3",
 ]
 
 [tool.ruff]
