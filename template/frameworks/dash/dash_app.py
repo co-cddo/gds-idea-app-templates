@@ -3,6 +3,7 @@ import logging
 
 from cognito_auth.dash import DashAuth
 from dash import Dash, Input, Output, dcc, html
+from flask import jsonify, request
 
 logging.basicConfig(level=logging.DEBUG)
 logging.getLogger("watchdog").setLevel(logging.WARNING)
@@ -10,15 +11,17 @@ logging.getLogger("watchdog").setLevel(logging.WARNING)
 REDIRECT_URL = "https://gds-idea.click/401.html"
 
 app = Dash(__name__)
+
+
+# create the health check endpoint for the ALB
+@app.server.before_request
+def maybe_handle_health():
+    if request.path == "/health":
+        return jsonify({"status": "ok"}), 200
+
+
 auth = DashAuth()
 auth.protect_app(app)  # protects the entire app.
-
-
-# health check endpoint for ECS/ALB
-# create this so access to the container can be monitored
-@app.server.route("/health")
-def health_check():
-    return {"status": "healthy"}, 200
 
 
 # Layout with dynamic content that will be populated by callback
