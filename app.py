@@ -29,7 +29,7 @@ stack = WebApp(
     app,
     deployment_config=dep_config,
     app_config=app_config,
-    authentication=AuthType.COGNITO,
+    authentication=AuthType.INTERNAL_ACCESS,
 )
 
 app.synth()
