@@ -15,7 +15,7 @@ ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 
 # Install UV (pinned to major version)
-COPY --from=ghcr.io/astral-sh/uv:0.5 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.9 /uv /usr/local/bin/uv
 
 # Create non-root user and set ownership of /app
 RUN groupadd --gid $USER_GID $USERNAME \
