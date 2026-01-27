@@ -5,8 +5,21 @@ from cognito_auth.dash import DashAuth
 from dash import Dash, Input, Output, dcc, html
 from flask import jsonify, request
 
-logging.basicConfig(level=logging.DEBUG)
+# Configure logging - quiet noisy libraries
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+
+# Quiet noisy third-party loggers
 logging.getLogger("watchdog").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("botocore").setLevel(logging.WARNING)
+logging.getLogger("boto3").setLevel(logging.WARNING)
+logging.getLogger("werkzeug").setLevel(logging.WARNING)  # Flask logger
+
+# Your app logger
+logger = logging.getLogger(__name__)
 
 REDIRECT_URL = "https://gds-idea.click/401.html"
 
