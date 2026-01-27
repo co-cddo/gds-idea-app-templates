@@ -3,8 +3,20 @@ import logging
 import streamlit as st
 from cognito_auth.streamlit import StreamlitAuth
 
-logging.basicConfig(level=logging.DEBUG)
+# Configure logging - quiet noisy libraries
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+
+# Quiet noisy third-party loggers
 logging.getLogger("watchdog").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("botocore").setLevel(logging.WARNING)
+logging.getLogger("boto3").setLevel(logging.WARNING)
+
+# Your app logger
+logger = logging.getLogger(__name__)
 
 REDIRECT_URL = "https://gds-idea.click/401.html"
 

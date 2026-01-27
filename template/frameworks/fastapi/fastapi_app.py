@@ -4,8 +4,21 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from cognito_auth.fastapi import FastAPIAuth
 
-logging.basicConfig(level=logging.DEBUG)
+# Configure logging - quiet noisy libraries
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+
+# Quiet noisy third-party loggers
 logging.getLogger("watchdog").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("botocore").setLevel(logging.WARNING)
+logging.getLogger("boto3").setLevel(logging.WARNING)
+logging.getLogger("uvicorn.access").setLevel(logging.WARNING)  # Uvicorn access logs
+
+# Your app logger
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 auth = FastAPIAuth(app)

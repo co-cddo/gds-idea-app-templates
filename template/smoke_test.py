@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-Smoke Test Script - Validates that the application builds and runs correctly.
+Smoke Test Script - Validates that the PRODUCTION application builds and runs correctly.
+
+This tests the production Docker image (secure, minimal, non-root) that will be
+deployed to AWS ECS, not the development image used in VS Code dev containers.
 
 Usage:
     uv run smoke_test           # Run health check then exit
@@ -18,9 +21,6 @@ from pathlib import Path
 # Get repository root (parent of template/ directory)
 REPO_ROOT = Path(__file__).parent.parent
 PYPROJECT_PATH = REPO_ROOT / "pyproject.toml"
-DOCKERFILE_PATH = REPO_ROOT / "app_src" / "Dockerfile"
-
-# Configuration
 COMPOSE_FILE = ".devcontainer/docker-compose.yml"
 SERVICE_NAME = "app"
 CONTAINER_PORT = 8080
@@ -82,7 +82,7 @@ def get_host_port() -> str:
             str(CONTAINER_PORT),
         ]
     )
-    # Output format: "0.0.0.0:8501"
+    # Output format: "0.0.0.0:8080"
     return result.stdout.strip().split(":")[-1]
 
 
@@ -103,24 +103,34 @@ def check_health(url: str) -> bool:
 
 def main():
     wait_for_input = "--wait" in sys.argv
+    import os
 
     try:
         # Validate configuration
         health_path = validate_configuration()
 
-        # Build image
-        print("---")
-        print("🏗️  Building Docker image using docker-compose...")
-        run_command(["docker-compose", "-f", COMPOSE_FILE, "build"])
+        # Set environment to build production target
+        env = os.environ.copy()
+        env["DOCKER_TARGET"] = "production"
 
-        # Start container
+        # Build production image using docker-compose
         print("---")
-        print("🚀 Starting container in the background...")
-        run_command(["docker-compose", "-f", COMPOSE_FILE, "up", "-d"])
+        print("🏗️  Building PRODUCTION Docker image (secure, non-root, minimal)...")
+        print("   Note: Using docker-compose with DOCKER_TARGET=production")
+        build_cmd = ["docker-compose", "-f", COMPOSE_FILE, "build"]
+        subprocess.run(build_cmd, check=True, env=env)
+        print("✅ Build complete")
+
+        # Start container using docker-compose
+        print("---")
+        print("🚀 Starting production container with docker-compose...")
+        up_cmd = ["docker-compose", "-f", COMPOSE_FILE, "up", "-d"]
+        subprocess.run(up_cmd, check=True, env=env)
+        print("✅ Container started")
 
         # Get port mapping
         print("---")
-        print("🔍 Detecting port mapping from docker-compose.yml...")
+        print("🔍 Detecting port mapping...")
         host_port = get_host_port()
         health_url = f"http://localhost:{host_port}{health_path}"
         print(f"   Container port {CONTAINER_PORT} mapped to host port {host_port}")
@@ -128,15 +138,14 @@ def main():
 
         # Wait for health check
         print("---")
-        print(
-            f"🩺 Performing health check, polling for up to {MAX_WAIT_SECONDS} seconds..."
-        )
+        print(f"🩺 Performing health check at {health_url}")
+        print(f"   Polling for up to {MAX_WAIT_SECONDS} seconds...")
 
         seconds_waited = 0
         while seconds_waited < MAX_WAIT_SECONDS:
             if check_health(health_url):
                 print()  # Newline after dots
-                print("✅ Health check PASSED! The application is running correctly.")
+                print("✅ Health check PASSED! Production image is working correctly.")
                 break
 
             print(".", end="", flush=True)
@@ -156,7 +165,7 @@ def main():
         # Wait for user input if requested
         if wait_for_input:
             print("---")
-            print(f"➡️  Container is running on http://localhost:{host_port}")
+            print(f"➡️  Production container is running on http://localhost:{host_port}")
             print(
                 "   --wait flag detected. Press [ENTER] to stop the container and clean up."
             )
