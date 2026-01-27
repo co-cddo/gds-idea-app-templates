@@ -56,4 +56,4 @@ server = app.server
 
 if __name__ == "__main__":
     # Development mode: run Flask dev server with auto-reload
-    app.run(debug=True, host="0.0.0.0", port=80)
+    app.run(debug=True, host="0.0.0.0", port=8080)
