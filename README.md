@@ -1,3 +1,8 @@
+# DO NOT USE
+This repo is superceded by our app kit see: 
+https://github.com/co-cddo/gds-idea-app-kit
+
+
 # Web App Template with AWS Cognito Authentication
 
 A template repository for deploying Streamlit, Dash, or FastAPI applications easily 
